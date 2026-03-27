@@ -10,7 +10,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from "@/components/providers/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "Flower Fairy | Premium Gifts",
+  title: "AE Naturals | Premium Gifts",
   description: "Fresh flowers and cakes delivered same day.",
 };
 

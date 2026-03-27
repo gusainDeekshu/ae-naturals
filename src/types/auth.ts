@@ -1,11 +1,12 @@
-//src/types/auth.ts
+// src/types/auth.ts
 export interface User {
   id: string;
   email: string;
   role: string;
-  name: string;
+  name?: string;
 }
 
-export interface RefreshResponse {
+export interface AuthResponse {
   access_token: string;
+  user: User;
 }

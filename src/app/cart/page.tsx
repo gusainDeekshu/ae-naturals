@@ -28,32 +28,44 @@ export default function CartPage() {
   // src/app/cart/page.tsx
   console.log("Cart Items at Checkout:", items); // Debug log to check cart items
 
-const handleCheckout = async () => {
-  if (!user) {
-    setLoginOpen(true);
-    return;
-  }
-  console.log("Cart Items at Checkout:", items); // Debug log to check cart items
-  // Look for storeId in the first item of your cart
-  const storeId = items[0]?.storeId;
+  const handleCheckout = async () => {
+    // 1. If not logged in, open modal
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
 
-  if (!storeId) {
-    // This was the error trigger. Now it will find the ID from the store above.
-    console.error("No store information found in cart items");
-    return;
-  }
+    // 2. 🔥 The Fix: Get the FRESH items directly from the store state
+    // This ensures that if syncCart just finished, we see the new items.
+    const currentItems = useCartStore.getState().items;
 
-  try {
-    setIsProcessing(true);
-    const order = await orderService.createOrder(storeId);
-    router.push(`/checkout/${order.id}`);
-    clearCart();
-  } catch (error) {
-    console.error("Order creation failed:", error);
-  } finally {
-    setIsProcessing(false);
-  }
-};
+    console.log("Fresh Cart Items for Checkout:", currentItems);
+
+    if (!currentItems || currentItems.length === 0) {
+      console.error("Cart is empty. Cannot proceed to checkout.");
+      return;
+    }
+
+    const storeId = currentItems[0]?.storeId;
+
+    if (!storeId) {
+      console.error("No store information found in cart items");
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const order = await orderService.createOrder(storeId);
+
+      // Clear local cart ONLY after backend order is confirmed
+      clearCart();
+      router.push(`/checkout/${order.id}`);
+    } catch (error) {
+      console.error("Order creation failed:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -63,7 +75,7 @@ const handleCheckout = async () => {
         <p className="text-gray-500 mb-8">
           Add some beautiful flowers to get started!
         </p>
-        <Link href="/shop">
+        <Link href="/">
           <Button className="bg-[#006044] hover:bg-[#004d3d]">
             Continue Shopping
           </Button>
@@ -169,7 +181,11 @@ const handleCheckout = async () => {
       <OtpModal
         isOpen={isLoginOpen}
         onClose={() => setLoginOpen(false)}
-        onSuccess={() => setLoginOpen(false)}
+        onSuccess={() => {
+          setLoginOpen(false);
+          // 🔥 Re-trigger checkout now that we are logged in and synced
+          handleCheckout();
+        }}
       />
     </div>
   );

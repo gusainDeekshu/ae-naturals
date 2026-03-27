@@ -1,13 +1,31 @@
 // src/lib/api-client.ts
-import axios from "axios";
-import { useAuthStore } from "@/store/useAuthStore";
 
+import { useAuthStore } from "@/store/useAuthStore";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+
+// This "Augmentation" tells TS that axios methods return the data directly
+declare module "axios" {
+  export interface AxiosInstance {
+    request<T = any, R = T>(config: AxiosRequestConfig): Promise<R>;
+    get<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
+    delete<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
+    head<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
+    options<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
+    post<T = any, R = T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<R>;
+    put<T = any, R = T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<R>;
+    patch<T = any, R = T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<R>;
+  }
+}
+// 1. Create the instance
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1",
-  withCredentials: true, // 🔥 REQUIRED
+  withCredentials: true, // Critical for sending HTTP-Only cookies
 });
 
-// Attach access token
+/**
+ * REQUEST INTERCEPTOR
+ * Attaches the Access Token (from Zustand RAM) to every outgoing request.
+ */
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
 
@@ -18,34 +36,51 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle refresh automatically
+/**
+ * RESPONSE INTERCEPTOR
+ * 1. Unwraps data so components get { user, token } directly.
+ * 2. Handles 401 Unauthorized errors by attempting a "Silent Refresh".
+ */
 apiClient.interceptors.response.use(
-  (res) => res,
+  (response) => {
+    // Return the nested data so we don't have to call .data.data in our components
+    return response.data;
+  },
   async (error) => {
     const originalRequest = error.config;
 
+    // 401 means Access Token expired. We try to refresh using the HTTP-Only cookie.
+    // We check !originalRequest._retry to prevent infinite loops if refresh also fails.
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        const { data } = await axios.post(
+        // We use the raw axios instance here to avoid the interceptors for the refresh call
+        const refreshResponse = await axios.post(
           `${apiClient.defaults.baseURL}/auth/refresh`,
           {},
           { withCredentials: true }
         );
 
-        useAuthStore.getState().setAuth(
-          data.user,
-          data.access_token
-        );
+        // The backend returns { access_token, user }
+        const { access_token, user } = refreshResponse.data;
 
-        originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+        // Update the Zustand store (RAM only, as we discussed for security)
+        useAuthStore.getState().setAuth(user, access_token);
+
+        // Update the failed request's header and retry it
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return apiClient(originalRequest);
-      } catch (err) {
+      } catch (refreshError) {
+        // Refresh token is also expired or invalid - Force Logout
         useAuthStore.getState().logout();
+        return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
   }
 );
+
+// We export it as default to satisfy Next.js/Turbopack requirements
+export default apiClient;

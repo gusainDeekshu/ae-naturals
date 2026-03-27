@@ -1,3 +1,4 @@
+// src\components\auth\OtpModal.tsx
 "use client";
 
 import { useState } from "react";
@@ -21,7 +22,7 @@ export function OtpModal({
   const [step, setStep] = useState(1);
   const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
-  
+
   // Hooks for state management
   const { syncCart } = useCartStore();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -44,40 +45,36 @@ export function OtpModal({
   });
 
   // Mutation to Verify OTP and Sync Cart
+  // src/components/auth/OtpModal.tsx
+
   const verifyOtpMutation = useMutation({
     mutationFn: (otpCode: string) =>
       apiClient.post("/auth/verify-otp", {
         identifier,
         otp: otpCode,
-        // Optional: Sending items here if your backend handles merge during verify
-        cartItems, 
       }),
-    onSuccess: async (response: any) => {
-      // Axios typically wraps the response in a 'data' property
-      const data = response?.data || response;
-
-      if (data?.access_token) {
-        // 1. Set authentication state
+    onSuccess: async (data: any) => {
+      if (data && data.access_token) {
+        // 1. Set Auth first so syncCart knows we are logged in
         setAuth(data.user, data.access_token);
         toast.success("Welcome back!");
 
         try {
-          // 2. Sync local guest items to the backend database
-          // This ensures items aren't lost during the transition from guest to user
+          // 2. AWAIT the sync completely
+          // This ensures items move from Guest -> DB before we proceed
           await syncCart();
+          console.log("Cart synced successfully");
         } catch (syncError) {
-          console.error("Cart sync failed after login:", syncError);
+          console.error("Cart sync failed:", syncError);
         }
 
-        // 3. Finalize the login process
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 100);
+        // 3. Close and finalize
+        onClose();
+        onSuccess();
       }
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Verification failed");
+      toast.error(error?.response?.data?.message || "Invalid or expired OTP");
     },
   });
 

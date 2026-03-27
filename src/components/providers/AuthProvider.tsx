@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { apiClient } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setAuth, logout, _hasHydrated } = useAuthStore();
@@ -12,29 +12,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Ensure your backend returns { user: {...}, access_token: "..." }
-        const { data } = await apiClient.get("/auth/me");
+        // 🔥 This is the "Magic" call. 
+        // It sends the HTTP-Only cookie to the backend.
+        // The backend verifies it and returns a fresh access_token.
+        const res = await apiClient.get("/auth/me");
         
-        // DEBUG: console.log("User Data from API:", data);
-        
-        // Make sure you aren't passing data.user.user by mistake
-        setAuth(data.user || data, data.access_token || ""); 
+        if (res && res.access_token) {
+          setAuth(res.user, res.access_token);
+        }
       } catch (err) {
-        console.error("No session found or session expired");
+        // If the cookie is expired or missing, we just clear the state
+        console.log("No active session found on boot.");
         logout();
       } finally {
         setLoading(false);
       }
     };
 
-    initAuth();
-  }, [setAuth, logout]);
+    if (_hasHydrated) {
+      initAuth();
+    }
+  }, [_hasHydrated, setAuth, logout]);
 
-  // Wait for BOTH the API check and the Zustand Hydration to finish
-  if (loading || !_hasHydrated) {
+  if (!_hasHydrated || loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white font-bold text-[#006044]">
-        🌸 Loading Session...
+      <div className="h-screen flex items-center justify-center bg-white">
+        <p className="text-[#006044] font-bold animate-pulse">Restoring Session...</p>
       </div>
     );
   }
