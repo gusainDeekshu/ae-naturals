@@ -1,0 +1,25 @@
+// src/lib/getQueryClient.ts
+import { QueryClient, isServer } from '@tanstack/react-query'
+
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+      },
+    },
+  })
+}
+
+let browserQueryClient: QueryClient | undefined = undefined
+
+export function getQueryClient() {
+  if (isServer) {
+    // Server: always make a new query client per request
+    return makeQueryClient()
+  } else {
+    // Browser: make a new query client if we don't already have one
+    if (!browserQueryClient) browserQueryClient = makeQueryClient()
+    return browserQueryClient
+  }
+}

@@ -4,23 +4,25 @@ import { apiClient } from '@/lib/api-client';
 
 export function useProducts(categorySlug?: string) {
   return useQuery({
-    queryKey: ['products', 'flower-fairy-dehradun', categorySlug || null],
+    // 1. Remove categorySlug from the queryKey. The query fetches the WHOLE catalog.
+    queryKey: ['products', 'flower-fairy-dehradun', 'catalog'],
+    
     queryFn: async () => {
-      // 1. Fetch data using your existing apiClient
       const response: any = await apiClient.get('/products/catalog/flower-fairy-dehradun');
-      
-      // 2. Extract the actual array. 
-      // Based on your previous logs, NestJS often returns { products: [...] }
       const data = response?.data || response;
-      const productList = Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []); 
-
-      // 3. Filter by category if a slug was provided
-      if (categorySlug && productList.length > 0) {
-        return productList.filter((p: any) => p.category?.slug === categorySlug);
-      }
-      
-      return productList;
+      return Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []); 
     },
-    staleTime: 1000 * 60 * 10,
+    
+    // 2. Use `select` to filter the data. React Query is smart enough to 
+    // memoize this and only return the filtered subset to the specific component.
+    select: (products) => {
+      if (categorySlug && products.length > 0) {
+        return products.filter((p: any) => p.category?.slug === categorySlug);
+      }
+      return products;
+    },
+    
+    // 3. Keep staleTime high. Products don't change every second.
+    staleTime: 1000 * 60 * 10, // 10 minutes
   });
 }

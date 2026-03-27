@@ -48,11 +48,11 @@ export function Header() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-1.5">
               <Phone size={14} className="fill-current" />
-              <span className="hidden xs:inline">{BRAND.contact}</span>
+              <span className=" xs:inline">{BRAND.phone}</span>
             </div>
             <div className="flex items-center gap-1.5 hidden md:flex">
               <Mail size={14} />
-              <span>{BRAND.mail}</span>
+              <span>{BRAND.email}</span>
             </div>
           </div>
           <div className="flex items-center gap-4 font-medium">
