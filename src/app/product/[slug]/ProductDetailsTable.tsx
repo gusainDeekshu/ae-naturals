@@ -1,23 +1,66 @@
-export default function ProductDetailsTable({ extra }: { extra: any }) {
-  if (!extra) return null;
+// src/app/product/[slug]/ProductDetailsTable.tsx
+import React from 'react';
+import { Store, Tag, Star, Activity } from 'lucide-react';
 
+interface ProductDetailsProps {
+  productData: any; // The data you provided
+  extra: any; // product.extra
+}
+
+export default function ProductDetailsTable({ productData, extra }: ProductDetailsProps) {
   return (
-    <section className="my-12">
-      <h2 className="text-2xl font-bold mb-6">Product Details</h2>
-      <div className="bg-white border rounded-lg overflow-hidden max-w-3xl">
+    <section className="w-full mt-10">
+      <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-6">
+        Product Specifications
+      </h2>
+
+      <div className="border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
         <table className="w-full text-sm text-left">
-          <tbody>
-            {extra.manufacturer && (
-              <tr className="border-b"><th className="bg-gray-50 p-4 w-1/3">Manufacturer</th><td className="p-4">{extra.manufacturer}</td></tr>
+          <tbody className="divide-y divide-zinc-200">
+            {/* --- TOP METADATA SECTION --- */}
+            <tr className="bg-zinc-50/50">
+              <th className="px-6 py-4 font-black text-zinc-500 uppercase text-[10px] tracking-widest w-1/3 flex items-center gap-2">
+                <Store size={14} className="text-[#006044]" /> Brand / Store
+              </th>
+              <td className="px-6 py-4 font-bold text-zinc-900">
+                {productData.store?.name || "AE Naturals Store"}
+              </td>
+            </tr>
+            <tr>
+              <th className="px-6 py-4 font-black text-zinc-500 uppercase text-[10px] tracking-widest w-1/3 flex items-center gap-2">
+                <Tag size={14} className="text-[#006044]" /> Category
+              </th>
+              <td className="px-6 py-4 font-bold text-zinc-900">
+                {productData.category?.name || "Cakes"}
+              </td>
+            </tr>
+            <tr className="bg-zinc-50/50">
+              <th className="px-6 py-4 font-black text-zinc-500 uppercase text-[10px] tracking-widest w-1/3 flex items-center gap-2">
+                <Star size={14} className="text-amber-500" /> Customer Rating
+              </th>
+              <td className="px-6 py-4 font-bold text-zinc-900">
+                {productData.rating || "4.5"} / 5.0
+              </td>
+            </tr>
+
+            {/* --- TECHNICAL DETAILS (from extra) --- */}
+            {extra?.manufacturer && (
+              <tr>
+                <th className="px-6 py-4 font-black text-zinc-500 uppercase text-[10px] tracking-widest">Manufacturer</th>
+                <td className="px-6 py-4 text-zinc-600">{extra.manufacturer}</td>
+              </tr>
             )}
-            {extra.countryOfOrigin && (
-              <tr className="border-b"><th className="bg-gray-50 p-4 w-1/3">Country of Origin</th><td className="p-4">{extra.countryOfOrigin}</td></tr>
+            {extra?.countryOfOrigin && (
+              <tr className="bg-zinc-50/50">
+                <th className="px-6 py-4 font-black text-zinc-500 uppercase text-[10px] tracking-widest">Country of Origin</th>
+                <td className="px-6 py-4 text-zinc-600">{extra.countryOfOrigin}</td>
+              </tr>
             )}
-            {extra.weight && (
-              <tr className="border-b"><th className="bg-gray-50 p-4 w-1/3">Weight</th><td className="p-4">{extra.weight}</td></tr>
-            )}
-            {extra.dimensions && (
-              <tr className="border-b"><th className="bg-gray-50 p-4 w-1/3">Dimensions</th><td className="p-4">{extra.dimensions}</td></tr>
+            {extra?.genericName && (
+              <tr>
+                <th className="px-6 py-4 font-black text-zinc-500 uppercase text-[10px] tracking-widest">Generic Name</th>
+                <td className="px-6 py-4 text-zinc-600">{extra.genericName}</td>
+              </tr>
             )}
           </tbody>
         </table>
