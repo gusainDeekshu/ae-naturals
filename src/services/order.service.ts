@@ -2,8 +2,9 @@
 import { apiClient } from '@/lib/api-client';
 
 export const orderService = {
-  async createOrder(storeId: string) {
-    const { data } = await apiClient.post('/orders/create', { storeId });
+  async createOrder(storeId: string,  addressId: string,
+        shippingCost: string ) {
+    const { data } = await apiClient.post('/orders/create', { storeId,addressId,shippingCost });
     return data;
   },
 

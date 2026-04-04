@@ -1,24 +1,40 @@
 // src/services/address.service.ts
 import { apiClient } from '@/lib/api-client';
 
-export interface Address {
-  id: string;
-  name: string;
+export interface AddressPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
   phone: string;
-  addressLine: string;
+  pincode: string;
   city: string;
   state: string;
-  pincode: string;
+  addressLine: string; // Maps to textarea 'address'
+  label: 'HOME' | 'WORK' | 'OTHER';
   isDefault: boolean;
+}
+
+export interface Address extends AddressPayload {
+  id: string;
+  name: string; // Handled for backward compatibility with your Prisma schema
 }
 
 export const addressService = {
   getUserAddresses: async (): Promise<Address[]> => {
-    const { data } = await apiClient.get('/v1/addresses'); // Assumes you have an address GET endpoint
+    // Maps to your ProfileController @Get('addresses')
+    const { data } = await apiClient.get('/profile/addresses');
     return data;
   },
-  addAddress: async (payload: Omit<Address, 'id' | 'isDefault'>): Promise<Address> => {
-    const { data } = await apiClient.post('/v1/addresses', payload);
+
+  addAddress: async (payload: AddressPayload): Promise<Address> => {
+    // Transforming payload to prevent breaking existing Prisma Address model
+    const backendPayload = {
+      ...payload,
+      name: `${payload.firstName} ${payload.lastName}`.trim(),
+    };
+    
+    // Maps to your ProfileController @Post('addresses')
+    const { data } = await apiClient.post('/profile/addresses', backendPayload);
     return data;
   }
 };
