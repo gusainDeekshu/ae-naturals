@@ -8,6 +8,10 @@ import { orderService } from "@/services/order.service";
 import { paymentService } from "@/services/payment.service";
 import { addressService, Address } from "@/services/address.service";
 import { shippingService } from "@/services/shipping.service";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { PaymentInitiateResponse } from "@/types/payment";
+import { executePaymentFlow } from "@/lib/payment-handler";
 
 export default function CheckoutPage() {
   const { items } = useCartStore();
@@ -18,13 +22,13 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
-  
+
   // Shipping State
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
 
-  // Form State for new address
+  // Form State
   const [newAddress, setNewAddress] = useState({
     firstName: "",
     lastName: "",
@@ -35,14 +39,14 @@ export default function CheckoutPage() {
     state: "",
     pincode: "",
     label: "Home",
-    isDefault: false
+    isDefault: false,
   });
 
   const cartTotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const grandTotal = cartTotal + shippingCost;
   const storeId = items[0]?.storeId || "default-store";
 
-  // 1. Fetch Addresses on Mount
+  // Load Addresses
   useEffect(() => {
     loadAddresses();
   }, []);
@@ -51,225 +55,238 @@ export default function CheckoutPage() {
     try {
       const data = await addressService.getUserAddresses();
       setAddresses(data);
+
       if (data.length > 0) {
-        // Auto-select the default or first address
-        const defaultAddr = data.find(a => a.isDefault) || data[0];
+        const defaultAddr = data.find((a) => a.isDefault) || data[0];
         setSelectedAddress(defaultAddr);
       } else {
         setShowAddAddressForm(true);
       }
     } catch (error) {
       console.error("Failed to fetch addresses", error);
+      toast.error("Failed to load addresses");
     }
   };
 
-  // 2. Trigger Shipping Calculation when Address changes
+  // Shipping Calculation
   useEffect(() => {
     if (selectedAddress && items.length > 0) {
       calculateShipping(selectedAddress.state, selectedAddress.pincode);
     }
   }, [selectedAddress, items]);
 
-  const calculateShipping = async (addressState: string, pincode: string) => {
+  const calculateShipping = async (state: string, pincode: string) => {
     setIsCalculatingShipping(true);
-    setShippingError(null); // Reset error on new calculation
-    
+    setShippingError(null);
+
     try {
       const payload = {
         storeId,
-        address: { state: addressState, pincode: pincode },
-        items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        address: { state, pincode },
+        items: items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+        })),
         paymentMethod: "PREPAID" as const,
-        cartTotal
+        cartTotal,
       };
-      
+
       const res = await shippingService.calculateShipping(payload);
       setShippingCost(res.shippingCost);
+
+      if (res.shippingCost === 0) {
+        toast.success("Free delivery available 🎉");
+      }
     } catch (error: any) {
-      console.error("Failed to calculate shipping", error);
-      
-      // Extract the error message from your backend response
-      const errorMessage = error.response?.data?.message || `Delivery not available for pincode ${pincode}`;
-      
-      setShippingError(errorMessage);
-      setShippingCost(0); // Reset cost so they don't see old amounts
+      console.error("Shipping error", error);
+
+      const msg =
+        error.response?.data?.message ||
+        `Delivery not available for pincode ${pincode}`;
+
+      setShippingError(msg);
+      setShippingCost(0);
+      toast.error(msg);
     } finally {
       setIsCalculatingShipping(false);
     }
   };
 
+  // Add Address
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
       const added = await addressService.addAddress({
         ...newAddress,
-        label: (newAddress.label.toUpperCase() as "HOME" | "WORK" | "OTHER")
+        label: newAddress.label.toUpperCase() as "HOME" | "WORK" | "OTHER",
       });
+
       setAddresses([...addresses, added]);
       setSelectedAddress(added);
       setShowAddAddressForm(false);
-    } catch (error) {
-      console.error("Failed to add address", error);
+
+      toast.success("Address added successfully!");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Failed to add address");
     }
   };
 
+  // Place Order
   const handlePlaceOrder = async () => {
-    if (!selectedAddress) return alert("Please select a delivery address.");
-    
-    // 🔥 The Fix: Get the FRESH items directly from the store state
+    if (!selectedAddress) {
+      toast.error("Please select a delivery address");
+      return;
+    }
+
     const currentItems = useCartStore.getState().items;
 
-    console.log("Fresh Cart Items for Checkout:", currentItems);
-
     if (!currentItems || currentItems.length === 0) {
-      console.error("Cart is empty. Cannot proceed to checkout.");
+      toast.error("Your cart is empty");
       return;
     }
 
     const currentStoreId = currentItems[0]?.storeId;
 
     if (!currentStoreId) {
-      console.error("No store information found in cart items");
+      toast.error("Store info missing");
       return;
     }
 
     setIsProcessing(true);
-    
+
     try {
+      toast.loading("Placing your order...");
+
       const order = await orderService.createOrder(
         currentStoreId,
         selectedAddress.id,
         shippingCost.toString()
       );
 
-      // Clear local cart ONLY after backend order is confirmed
       useCartStore.getState().clearCart();
 
-      const payRes = await paymentService.initiatePayment(order.id, "STRIPE");
-      const checkoutUrl = payRes?.data?.url || payRes?.data?.checkoutUrl || payRes?.checkoutUrl;
+      toast.success("Order created!");
+
+      // Call your backend which now strictly returns PaymentInitiateResponse
+    const payRes = await paymentService.initiatePayment(order.id);
+    const responseData: PaymentInitiateResponse = payRes?.data || payRes;
+
+    // ADD THIS LINE TO DEBUG:
+    console.log("BACKEND PAYLOAD:", responseData);
+
+    // 🔥 Delegate to Universal Handler
+    executePaymentFlow(responseData, order.id, router);
+
+      const checkoutUrl =
+        payRes?.data?.url ||
+        payRes?.data?.checkoutUrl ||
+        payRes?.checkoutUrl;
 
       if (checkoutUrl) {
+        toast.loading("Redirecting to payment...");
         window.location.href = checkoutUrl;
       } else {
+        toast.success("Order placed successfully!");
         router.push(`/order-success/${order.id}`);
       }
-    } catch (err) {
-      console.error("Checkout failed", err);
+    } catch (err: any) {
+      console.error(err);
+
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Checkout failed";
+
+      toast.error(msg);
     } finally {
       setIsProcessing(false);
     }
   };
 
   if (items.length === 0) {
-    return <div className="p-8 text-center text-gray-500 font-medium mt-10">Your cart is empty. Please add items to proceed.</div>;
+    return (
+      <div className="p-8 text-center text-gray-500 font-medium mt-10">
+        Your cart is empty. Please add items to proceed.
+      </div>
+    );
   }
 
   return (
     <div className="p-8 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
       
-      {/* LEFT COLUMN: Delivery Information */}
+      {/* LEFT */}
       <div>
         <h2 className="text-xl font-bold mb-4">Delivery Address</h2>
-        
+
         {addresses.length > 0 && !showAddAddressForm ? (
           <div className="space-y-4">
             {addresses.map((addr) => (
-              <div 
-                key={addr.id} 
+              <div
+                key={addr.id}
                 onClick={() => setSelectedAddress(addr)}
-                className={`p-4 border rounded-xl cursor-pointer transition-colors ${
-                  selectedAddress?.id === addr.id ? "border-[#006044] bg-[#006044]/5 shadow-sm" : "border-gray-200 hover:border-[#006044]/50"
+                className={`p-4 border rounded-xl cursor-pointer ${
+                  selectedAddress?.id === addr.id
+                    ? "border-[#006044] bg-[#006044]/5"
+                    : "border-gray-200"
                 }`}
               >
-                <div className="font-semibold text-gray-800">{addr.name}</div>
-                <div className="text-sm text-gray-600 mt-1">{addr.addressLine}, {addr.city}</div>
-                <div className="text-sm text-gray-600">{addr.state} - <span className="font-medium">{addr.pincode}</span></div>
-                <div className="text-sm text-gray-600 font-medium mt-2">Phone: {addr.phone}</div>
+                <div className="font-semibold">{addr.name}</div>
+                <div className="text-sm">
+                  {addr.addressLine}, {addr.city}
+                </div>
+                <div className="text-sm">
+                  {addr.state} - {addr.pincode}
+                </div>
               </div>
             ))}
-            <Button variant="outline" onClick={() => setShowAddAddressForm(true)} className="w-full mt-2 font-bold text-gray-600 rounded-xl border-dashed border-2">
-              + Add New Address
+
+            <Button onClick={() => setShowAddAddressForm(true)}>
+              + Add Address
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleAddAddress} className="space-y-3 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <input required placeholder="First Name" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, firstName: e.target.value})} />
-              <input required placeholder="Last Name" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, lastName: e.target.value})} />
-            </div>
-            <input required type="email" placeholder="Email" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, email: e.target.value})} />
-            <input required placeholder="Phone Number" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, phone: e.target.value})} />
-            <input required placeholder="Address Line" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, addressLine: e.target.value})} />
-            <div className="grid grid-cols-2 gap-3">
-              <input required placeholder="City" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, city: e.target.value})} />
-              <input required placeholder="State (e.g., Karnataka)" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, state: e.target.value})} />
-            </div>
-            <input required placeholder="Pincode" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-[#006044] transition-colors" onChange={e => setNewAddress({...newAddress, pincode: e.target.value})} />
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1 bg-[#006044] hover:bg-[#004d3d] rounded-lg">Save Address</Button>
-              {addresses.length > 0 && (
-                <Button type="button" variant="outline" onClick={() => setShowAddAddressForm(false)} className="flex-1 rounded-lg">Cancel</Button>
-              )}
-            </div>
+          <form onSubmit={handleAddAddress} className="space-y-3">
+            <input placeholder="First Name" required onChange={(e) => setNewAddress({ ...newAddress, firstName: e.target.value })} />
+            <input placeholder="Last Name" required onChange={(e) => setNewAddress({ ...newAddress, lastName: e.target.value })} />
+            <input placeholder="Email" required onChange={(e) => setNewAddress({ ...newAddress, email: e.target.value })} />
+            <input placeholder="Phone" required onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })} />
+            <input placeholder="Address" required onChange={(e) => setNewAddress({ ...newAddress, addressLine: e.target.value })} />
+            <input placeholder="City" required onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} />
+            <input placeholder="State" required onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })} />
+            <input placeholder="Pincode" required onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })} />
+
+            <Button type="submit">Save Address</Button>
           </form>
         )}
       </div>
 
-      {/* RIGHT COLUMN: Order Summary */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-md h-fit sticky top-28">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">Order Summary</h2>
-        
-        <div className="space-y-3 border-b border-gray-100 pb-4 mb-4 text-sm">
-          {items.map((item) => (
-            <div key={item.productId} className="flex justify-between items-center">
-              <span className="text-gray-600 line-clamp-1 pr-4">{item.name} <span className="font-bold text-xs ml-1 text-gray-400">x{item.quantity}</span></span>
-              <span className="font-bold text-gray-800">₹{item.price * item.quantity}</span>
-            </div>
-          ))}
+      {/* RIGHT */}
+      <div className="bg-white p-6 rounded-xl">
+        <h2 className="text-xl font-bold mb-4">Summary</h2>
+
+        {items.map((item) => (
+          <div key={item.productId} className="flex justify-between">
+            <span>{item.name} x{item.quantity}</span>
+            <span>₹{item.price * item.quantity}</span>
+          </div>
+        ))}
+
+        <div className="mt-4">
+          <div>Subtotal: ₹{cartTotal}</div>
+          <div>Shipping: ₹{shippingCost}</div>
+          <div className="font-bold">Total: ₹{grandTotal}</div>
         </div>
 
-        <div className="space-y-2 mb-4 font-medium">
-          <div className="flex justify-between">
-            <span className="text-gray-500">Subtotal</span>
-            <span className="text-gray-800">₹{cartTotal}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500">Shipping</span>
-            <span>
-              {isCalculatingShipping ? (
-                <span className="text-xs text-[#006044] animate-pulse font-bold">Calculating...</span>
-              ) : shippingError ? (
-                <span className="text-red-500 font-bold text-xs uppercase tracking-wide">Unavailable</span>
-              ) : shippingCost === 0 ? (
-                <span className="text-[#006044] font-bold">FREE</span>
-              ) : (
-                <span className="text-gray-800">₹{shippingCost}</span>
-              )}
-            </span>
-          </div>
-        </div>
-
-        {/* Display Shipping Error Box if Delivery is Unavailable */}
-        {shippingError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-sm font-medium text-center">
-            {shippingError}
-          </div>
-        )}
-
-        <div className="flex justify-between text-xl font-black pt-4 border-t border-gray-100 text-[#006044]">
-          <span>Total</span>
-          <span>₹{grandTotal}</span>
-        </div>
-
-        <Button 
-          onClick={handlePlaceOrder} 
-          disabled={isProcessing || !selectedAddress || isCalculatingShipping || !!shippingError}
-          className="w-full mt-6 py-6 text-lg font-bold bg-[#006044] hover:bg-[#004d3d] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        <Button
+          onClick={handlePlaceOrder}
+          disabled={isProcessing || !!shippingError}
+          className="w-full mt-4"
         >
-          {isProcessing ? "Processing..." : `Pay ₹${grandTotal}`}
+          {isProcessing ? <Loader2 className="animate-spin" /> : `Pay ₹${grandTotal}`}
         </Button>
       </div>
-
     </div>
   );
 }

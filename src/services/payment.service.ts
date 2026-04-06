@@ -5,18 +5,22 @@ export const paymentService = {
   /**
    * Initialize a payment session/intent with the backend
    */
-  async initiatePayment(orderId: string, paymentMethod: string) {
-    try {
-      const response = await apiClient.post("/payments/initiate", {
-        orderId,
-        provider: paymentMethod, // e.g., 'razorpay', 'stripe', 'phonepe'
-      });
-      return response;
-    } catch (error) {
-      console.error("Payment Initiation Error:", error);
-      throw error;
+  async initiatePayment(orderId: string, preferredProvider?: string) {
+  try {
+    // Only send the provider if it's explicitly passed
+    const payload: { orderId: string; provider?: string } = { orderId };
+    
+    if (preferredProvider) {
+      payload.provider = preferredProvider;
     }
-  },
+
+    const response = await apiClient.post("/payments/initiate", payload);
+    return response;
+  } catch (error) {
+    console.error("Payment Initiation Error:", error);
+    throw error;
+  }
+},
 
   /**
    * Verify a payment signature after successful gateway transaction
