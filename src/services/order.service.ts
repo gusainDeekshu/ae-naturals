@@ -2,9 +2,19 @@
 import { apiClient } from '@/lib/api-client';
 
 export const orderService = {
-  async createOrder(storeId: string,  addressId: string,
-        shippingCost: string ) {
-    const { data } = await apiClient.post('/orders/create', { storeId,addressId,shippingCost });
+ async createOrder(
+    storeId: string, 
+    addressId: string,
+    shippingCost: string,
+    courierId?: string // 🔥 NEW: Add courierId here
+  ) {
+    const { data } = await apiClient.post('/orders/create', { 
+      storeId,
+      addressId,
+      shippingCost,
+      courierId // 🔥 NEW: Send it in the payload
+    });
+    
     return data;
   },
 
