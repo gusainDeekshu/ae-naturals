@@ -20,6 +20,7 @@ export function AddressDrawer({ isOpen, onClose, onAddressSelect }: AddressDrawe
 
   // Form State
   const [formData, setFormData] = useState<AddressPayload>({
+    name: '',
     firstName: '',
     lastName: '',
     email: '',

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCartStore } from "@/store/useCartStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { orderService } from "@/services/order.service";
@@ -23,7 +23,27 @@ interface CourierOption {
 export default function CheckoutPage() {
   const { items } = useCartStore();
   const router = useRouter();
+  const searchParams = useSearchParams(); // 🔥 Add this
+// --- 🔥 NEW: Listen for Payment Redirect Errors ---
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    const reasonParam = searchParams.get("reason");
 
+    if (errorParam) {
+      // 1. Show the appropriate error message
+      if (errorParam === "payment_failed") {
+        toast.error("Payment failed or was cancelled. Please try again.");
+      } else if (errorParam === "hash_mismatch") {
+        toast.error(`Security validation failed: ${reasonParam || "Contact support"}`);
+      } else {
+        toast.error("An error occurred during checkout.");
+      }
+
+      // 2. Clean up the URL so the error doesn't keep showing on refresh
+      // This removes the ?error=... from the browser address bar silently
+      router.replace("/checkout", { scroll: false });
+    }
+  }, [searchParams, router]);
   // --- State Management ---
   const [isProcessing, setIsProcessing] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -135,7 +155,7 @@ export default function CheckoutPage() {
 
         // Auto-select the cheapest option
         handleCourierSelect(sortedOptions[0]);
-        toast.success("Delivery options updated");
+        // toast.success("Delivery options updated");
       } else {
         setShippingError("Delivery is not available for this pincode.");
       }
@@ -230,27 +250,31 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      toast.loading("Placing your order...");
+      toast.loading("Initializing secure payment...");
 
-      // 1. Create the order in the database (passing courierId)
-      const order = await orderService.createOrder(
-        currentStoreId,
-        selectedAddress.id,
-        shippingCost.toString(),
-        selectedCourierId, // 🔥 Injecting selected courier
-      );
+      // 1. Create CheckoutSession (NOT an Order)
+      // This locks in the intent to pay but does not finalize anything in the DB
+      const sessionRes = await apiClient.post('/checkout/session', {
+        storeId: currentStoreId,
+        addressId: selectedAddress.id,
+        shippingCost: shippingCost.toString(),
+        courierId: selectedCourierId,
+      });
+      
+      const session = sessionRes.data;
 
-      useCartStore.getState().clearCart();
-      toast.success("Order created! Initializing payment...");
+      // ❌ FATAL BUG REMOVED: Do NOT call clearCart() here anymore! 
+      // The cart remains intact until the webhook confirms success.
 
-      // 2. Fetch the payment initiation data from the backend
-      const payRes = await paymentService.initiatePayment(order.id);
+      // 2. Fetch the payment initiation data using the SESSION ID
+      const payRes = await paymentService.initiatePayment(session.id);
       const responseData: PaymentInitiateResponse = payRes?.data || payRes;
 
       console.log("BACKEND PAYLOAD:", responseData);
 
-      // 3. Delegate routing
-      executePaymentFlow(responseData, order.id, router);
+      // 3. Delegate routing (passing the session.id so the frontend tracks it)
+      executePaymentFlow(responseData, session.id, router);
+      
     } catch (err: any) {
       console.error(err);
       const msg =

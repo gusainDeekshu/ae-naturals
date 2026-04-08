@@ -5,36 +5,39 @@ export const paymentService = {
   /**
    * Initialize a payment session/intent with the backend
    */
-  async initiatePayment(orderId: string, preferredProvider?: string) {
-  try {
-    // Only send the provider if it's explicitly passed
-    const payload: { orderId: string; provider?: string } = { orderId };
-    
-    if (preferredProvider) {
-      payload.provider = preferredProvider;
-    }
+  async initiatePayment(sessionId: string, preferredProvider?: string) {
+    try {
+      // 🔥 Changed orderId to sessionId to match the backend controller
+      const payload: { sessionId: string; provider?: string } = { sessionId };
 
-    const response = await apiClient.post("/payments/initiate", payload);
-    return response;
-  } catch (error) {
-    console.error("Payment Initiation Error:", error);
-    throw error;
-  }
-},
+      if (preferredProvider) {
+        payload.provider = preferredProvider;
+      }
+
+      const response = await apiClient.post("/payments/initiate", payload);
+      return response;
+    } catch (error) {
+      console.error("Payment Initiation Error:", error);
+      throw error;
+    }
+  },
 
   /**
    * Verify a payment signature after successful gateway transaction
    */
   async verifyPayment(verificationData: any) {
     try {
-      const response = await apiClient.post("/payments/verify", verificationData);
+      const response = await apiClient.post(
+        "/payments/verify",
+        verificationData,
+      );
       return response;
     } catch (error) {
       console.error("Payment Verification Error:", error);
       throw error;
     }
   },
-  
+
   /**
    * Get payment status for a specific order
    */
@@ -46,5 +49,5 @@ export const paymentService = {
       console.error("Fetch Payment Status Error:", error);
       throw error;
     }
-  }
+  },
 };
