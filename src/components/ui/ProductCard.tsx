@@ -1,134 +1,144 @@
-// src/components/ui/ProductCard.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Star, Heart, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import AddToCartButton from '@/components/product/AddToCartButton';
-import { apiClient } from '@/lib/api-client';
-import { useAuthStore } from '@/store/useAuthStore';
-import { toast } from 'sonner';
+import { Star, ShoppingCart, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ProductVariant ,Product} from '@/types/product';
 
-export default function ProductCard({ product }: { product: any }) {
-  const { isAuthenticated } = useAuthStore();
-  const [isWishlisting, setIsWishlisting] = useState(false);
-  
-  // Initialize state from product prop
-  const [wishlisted, setWishlisted] = useState(product.isWishlisted || false);
+interface ProductCardProps {
+  product: Product;
+}
 
-  // Sync state if product prop changes (important for list filtering/re-renders)
-  useEffect(() => {
-    setWishlisted(product.isWishlisted || false);
-  }, [product.isWishlisted]);
+export const ProductCard = ({ product }: ProductCardProps) => {
+  // 1. Initial State: Handle potential empty variant arrays gracefully
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+    product.variants && product.variants.length > 0 ? product.variants[0] : null
+  );
 
-  const toggleWishlist = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // 2. Pricing Logic: Calculate dynamic price based on selected variant
+  const currentPrice = selectedVariant 
+    ? product.price + selectedVariant.priceModifier 
+    : product.price;
 
-    if (!isAuthenticated) {
-      return toast.error("Please login to manage your wishlist");
-    }
-
-    setIsWishlisting(true);
-    try {
-      // 1. Call the toggle API: POST /profile/wishlist/:productId
-      const res: any = await apiClient.post(`/profile/wishlist/${product.id}`);
-      
-      /** * 🔥 THE FIX: 
-       * Handle different response structures (res.added or res.data.added)
-       */
-      const backendStatus = res?.added !== undefined ? res.added : res?.data?.added;
-      
-      if (typeof backendStatus === 'boolean') {
-        // 2. Update the local heart state based on the REAL backend result
-        setWishlisted(backendStatus);
-        
-        // 3. Show the message the backend sent
-        const message = res?.message || res?.data?.message || (backendStatus ? "Added to wishlist" : "Removed from wishlist");
-        toast.success(message);
-      } else {
-        // Fallback toggle if backend returns success but no boolean
-        setWishlisted(!wishlisted);
-      }
-
-    } catch (error: any) {
-      console.error("Wishlist Toggle Error:", error);
-      toast.error("Could not update wishlist");
-    } finally {
-      setIsWishlisting(false);
-    }
-  };
+  // 3. Discount Logic: Handle null oldPrice safely
+  const discountPercentage = product.oldPrice 
+    ? Math.round(((product.oldPrice - currentPrice) / product.oldPrice) * 100) 
+    : null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden group hover:shadow-lg transition-all duration-300 relative">
-      <Link href={`/product/${product.slug}`} prefetch={true}>
-        {/* SALE Badge */}
-        <div className="absolute top-3 left-0 bg-[#006044] text-white text-[10px] font-bold px-3 py-1 rounded-r-full z-10">
-          SALE
-        </div>
-
-        {/* Wishlist Icon Button */}
-        <button 
-          onClick={toggleWishlist}
-          disabled={isWishlisting}
-          className={`absolute top-3 right-3 p-1.5 rounded-full shadow-sm z-10 transition-all duration-300 border ${
-            wishlisted 
-              ? "bg-red-500 text-white border-red-500" 
-              : "bg-white/90 text-gray-400 hover:text-red-500 border-gray-100"
-          }`}
-        >
-          {isWishlisting ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Heart size={16} className={wishlisted ? "fill-current" : ""} />
+    <div className="group relative flex h-full flex-col border border-gray-100 bg-white transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+      
+      {/* --- Image Section --- */}
+      <Link 
+        href={`/product/${product.slug}`} 
+        className="relative aspect-[4/5] w-full overflow-hidden bg-gray-50 flex items-center justify-center"
+      >
+        <Image
+          src={product.images?.[0] || '/placeholder-product.png'}
+          alt={product.name}
+          fill
+          className="object-contain p-6 transition-transform duration-700 group-hover:scale-110"
+          sizes="(max-width: 768px) 50vw, 25vw"
+          priority={false}
+        />
+        
+        {/* Badges: WOW Style high-contrast labels */}
+        <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
+          {discountPercentage && discountPercentage > 0 && (
+            <span className="bg-green-600 px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+              {discountPercentage}% OFF
+            </span>
           )}
-        </button>
-
-        {/* Product Image */}
-        <div className="aspect-[4/5] overflow-hidden bg-gray-50">
-          <img 
-            src={product.images?.[0] || '/placeholder.jpg'} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-            alt={product.name} 
-          />
+          {product.stock < 10 && product.stock > 0 && (
+            <span className="bg-orange-500 px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+              ONLY {product.stock} LEFT
+            </span>
+          )}
         </div>
 
-        {/* Product Info */}
-        <div className="p-4">
-          <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">
-            {product.name}
-          </h3>
-          
-          <div className="flex items-center gap-1 mb-2">
-            {[...Array(5)].map((_, i) => (
-              <Star 
-                key={i} 
-                size={12} 
-                className={i < Math.floor(product.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"} 
-              />
-            ))}
-            <span className="text-[10px] text-gray-400 font-bold ml-1">
-              ({product.reviewCount || 0})
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg font-black text-[#006044]">
-              ₹{product.price.toLocaleString('en-IN')}
-            </span>
-            {product.oldPrice && (
-              <span className="text-xs text-gray-400 line-through">
-                ₹{product.oldPrice.toLocaleString('en-IN')}
-              </span>
-            )}
-          </div>
-
-          {/* Integrated AddToCartButton */}
-          <div className="mt-auto">
-             <AddToCartButton product={product} />
-          </div>
+        {/* Floating Quick View: Slide-up UX */}
+        <div className="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center gap-2 bg-white/90 py-3 backdrop-blur-sm transition-transform duration-300 group-hover:translate-y-0">
+          <button className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-black hover:text-green-700">
+            <Eye size={14} /> Quick View
+          </button>
         </div>
       </Link>
+
+      {/* --- Content Section --- */}
+      <div className="flex flex-1 flex-col p-4 text-center">
+        {/* Visual Trust: Star Rating */}
+        <div className="mb-2 flex items-center justify-center gap-1 text-yellow-500">
+          {[...Array(5)].map((_, i) => (
+            <Star 
+              key={i} 
+              size={12} 
+              fill={i < Math.floor(product.rating) ? "currentColor" : "none"} 
+              className={i < Math.floor(product.rating) ? "" : "text-gray-300"}
+            />
+          ))}
+          <span className="text-[10px] font-medium text-gray-400 ml-1">
+            ({product.reviewCount})
+          </span>
+        </div>
+
+        {/* Product Title: Truncated for layout consistency */}
+        <Link href={`/product/${product.slug}`}>
+          <h3 className="line-clamp-2 min-h-[40px] text-sm font-bold uppercase tracking-tight text-gray-900 transition-colors hover:text-green-700">
+            {product.name}
+          </h3>
+        </Link>
+
+        {/* Dynamic Pricing Display */}
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <span className="text-lg font-black text-green-800">₹{currentPrice}</span>
+          {product.oldPrice && (
+            <span className="text-sm text-gray-400 line-through">₹{product.oldPrice}</span>
+          )}
+        </div>
+
+        {/* Variant Selectors: Size/Weight selection without navigating */}
+        {product.variants && product.variants.length > 1 && (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {product.variants.map((v) => (
+              <button
+                key={v.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedVariant(v);
+                }}
+                className={cn(
+                  "border px-2 py-1 text-[10px] font-bold transition-all min-w-[50px]",
+                  selectedVariant?.id === v.id 
+                    ? "border-black bg-black text-white" 
+                    : "border-gray-200 text-gray-500 hover:border-gray-400"
+                )}
+              >
+                {v.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* --- Action Section --- */}
+        <div className="mt-auto pt-4">
+          <button 
+            disabled={product.stock === 0}
+            className={cn(
+              "flex w-full items-center justify-center gap-2 py-3 text-xs font-black uppercase tracking-widest transition-all",
+              product.stock > 0 
+                ? "bg-black text-white hover:bg-green-800 active:scale-95 shadow-md" 
+                : "cursor-not-allowed bg-gray-100 text-gray-400"
+            )}
+          >
+            <ShoppingCart size={16} />
+            {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
+          </button>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default ProductCard;
