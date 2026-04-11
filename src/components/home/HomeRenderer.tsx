@@ -1,4 +1,4 @@
-// src\components\home\HomeRenderer.tsx
+// src/components/home/HomeRenderer.tsx
 
 "use client";
 
@@ -10,6 +10,8 @@ import { CategoryTabs } from '@/components/home/CategoryTabs';
 import { ProductGrid } from '@/components/home/ProductGrid';
 import { BundleBuilder } from '@/components/home/BundleBuilder';
 import { TrustBadges } from '@/components/home/TrustBadges';
+// 🔥 ADD THE NEW IMPORT HERE
+import { HomeCollections } from '@/components/home/HomeCollections'; 
 
 const SECTION_MAP: Record<string, React.FC<any>> = {
   HERO: HeroBanner,
@@ -17,6 +19,8 @@ const SECTION_MAP: Record<string, React.FC<any>> = {
   FEATURED_PRODUCTS: ProductGrid,
   // BUNDLE_BUILDER: BundleBuilder,
   TRUST_BADGES: TrustBadges,
+  // 🔥 MAP THE NEW COMPONENT
+  COLLECTIONS: HomeCollections, 
 };
 
 interface HomeRendererProps {
@@ -30,7 +34,9 @@ interface HomeRendererProps {
   data: any; 
 }
 
+
 export default function HomeRenderer({ config, data }: HomeRendererProps) {
+  console.log("data:::", data);
   if (!config?.sectionsOrder || !Array.isArray(config.sectionsOrder)) {
     return (
       <div className="flex h-64 items-center justify-center text-gray-400">
@@ -49,7 +55,7 @@ export default function HomeRenderer({ config, data }: HomeRendererProps) {
           return null; 
         }
         
-        // 🔥 THE FIX: Explicitly map the section type to the correct array from NestJS
+        // Explicitly map the section type to the correct array from NestJS
         let sectionData: any[] = [];
         
         switch (section.type) {
@@ -57,17 +63,19 @@ export default function HomeRenderer({ config, data }: HomeRendererProps) {
             sectionData = data.banners || [];
             break;
           case 'CATEGORIES':
-            sectionData = data.categories || [];
+            sectionData = data.collections || [];
             break;
           case 'FEATURED_PRODUCTS':
             sectionData = data.featuredProducts || [];
             break;
+          // 🔥 ADD THE COLLECTIONS CASE HERE
+          case 'COLLECTIONS':
+            sectionData = data.collections || [];
+            break;
           case 'BUNDLE_BUILDER':
-            // The bundle builder uses the featured products pool to let users build a box
             sectionData = data.featuredProducts || []; 
             break;
           case 'TRUST_BADGES':
-            // Trust badges are static in our component, so it doesn't need API data
             sectionData = []; 
             break;
         }

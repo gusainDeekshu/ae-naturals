@@ -1,4 +1,4 @@
-// src/components/ui/ProductCard.tsx
+// src\components\ui\ProductCard.tsx
 "use client";
 
 import React from "react";
@@ -17,7 +17,6 @@ interface ProductCardProps {
     images: string[];
     rating?: number;
     reviewCount?: number;
-    // 🔥 FIX: Accept either an object OR a string
     category?: { name: string } | string; 
   };
 }
@@ -25,72 +24,64 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { handleAddToCart, isAdding } = useAddToCart();
 
-  // Calculate discount percentage if oldPrice exists
   const discountPercent = product.oldPrice 
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0;
 
-  // 🔥 Helper to safely extract the category name regardless of data shape
   const categoryName = typeof product.category === 'string' 
     ? product.category 
     : product.category?.name;
 
   return (
-    <div className="group flex flex-col bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100">
+    <div className="group flex flex-col bg-white rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-100 relative h-full">
       
-      {/* --- IMAGE & BADGES --- */}
-      <Link href={`/product/${product.slug}`} className="relative aspect-square overflow-hidden bg-gray-50">
+      <Link href={`/product/${product.slug}`} className="relative aspect-[4/5] overflow-hidden bg-[#F7F7F7] block">
         <Image
           src={product.images?.[0] || "/placeholder-product.png"}
           alt={product.name}
           fill
-          className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          className="object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-in-out"
           sizes="(max-width: 768px) 50vw, 25vw"
         />
-        {/* Discount Badge */}
         {discountPercent > 0 && (
-          <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md z-10 shadow-sm">
+          <div className="absolute top-3 left-3 bg-[#E42529] text-white text-[10px] sm:text-xs font-black px-2 py-1 rounded-sm tracking-wider z-10 uppercase">
             {discountPercent}% OFF
           </div>
         )}
       </Link>
 
-      {/* --- CONTENT DETAILS --- */}
-      <div className="p-4 flex flex-col flex-grow">
-        
-        {/* Rating & Category Row */}
-        <div className="flex justify-between items-center mb-2">
+      <div className="p-4 sm:p-5 flex flex-col flex-grow bg-white">
+        {/* Rating Row */}
+        <div className="flex justify-start items-center mb-2">
           {product.rating && (
-            <div className="flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded text-xs font-bold text-yellow-700">
-              <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+            <div className="flex items-center gap-1 text-xs font-bold text-gray-700">
+              <Star className="w-3.5 h-3.5 fill-[#FFB800] text-[#FFB800]" />
               <span>{product.rating.toFixed(1)}</span>
               {product.reviewCount ? (
-                <span className="text-yellow-600/70 font-medium border-l border-yellow-200 pl-1 ml-0.5">
+                <span className="text-gray-400 font-medium ml-1">
                   ({product.reviewCount})
                 </span>
               ) : null}
             </div>
           )}
-          {/* 🔥 Safe Category Render */}
-          {categoryName && (
-            <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">
-              {categoryName}
-            </span>
-          )}
         </div>
 
         {/* Title */}
         <Link href={`/product/${product.slug}`}>
-          <h3 className="font-semibold text-gray-800 text-sm md:text-base leading-snug line-clamp-2 mb-3 group-hover:text-[#006044] transition-colors">
+          <h3 className="font-bold text-gray-900 text-sm md:text-base leading-snug line-clamp-2 mb-1 group-hover:text-[#006044] transition-colors">
             {product.name}
           </h3>
         </Link>
+        
+        {categoryName && (
+          <p className="text-xs text-gray-500 mb-3 truncate">{categoryName}</p>
+        )}
 
-        <div className="flex-grow" /> {/* Spacer */}
+        <div className="flex-grow" />
 
         {/* Pricing */}
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-lg font-black text-gray-900">
+          <span className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
             ₹{product.price.toLocaleString("en-IN")}
           </span>
           {product.oldPrice && (
@@ -100,14 +91,14 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Add to Cart - Sticky bottom behavior on mobile, clean on desktop */}
         <button
           onClick={() => handleAddToCart(product)}
           disabled={isAdding}
-          className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-[#006044] text-white py-2.5 rounded-xl font-bold text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-[#006044] text-white py-3 rounded-xl font-bold text-sm tracking-wide transition-colors disabled:opacity-70 disabled:cursor-not-allowed group-hover:shadow-md"
         >
           {isAdding ? (
-            <span className="animate-pulse">ADDING...</span>
+            <span className="animate-pulse">ADDING TO CART...</span>
           ) : (
             <>
               <ShoppingCart className="w-4 h-4" />
