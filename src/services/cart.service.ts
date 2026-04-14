@@ -1,37 +1,60 @@
-import { apiClient } from '@/lib/api-client';
-import { AddToCartPayload } from '@/types/cart';
+// src\services\cart.service.ts
+
+import { apiClient } from "@/lib/api-client";
+import { AddToCartPayload } from "@/types/cart";
 
 export const CartService = {
   getCart: async () => {
-    // Assuming backend routes start with /cart as designed earlier
-    const { data } = await apiClient.get('/cart');
+    const { data } = await apiClient.get("/cart");
     return data;
   },
 
+  // Fixed: POST /cart (Removed /items to match REST standard)
   addToCart: async (payload: AddToCartPayload) => {
-    const { data } = await apiClient.post('/cart/items', payload);
+    // ❌ OLD: await apiClient.post('/cart/add', payload);
+    // ✅ NEW: Use the correct REST endpoint
+    const { data } = await apiClient.post("/cart", payload);
     return data;
   },
 
-  updateQuantity: async (payload: { productId: string; variantId?: string; quantity: number }) => {
-    const { data } = await apiClient.patch('/cart/items', payload);
+  // Fixed: PATCH /cart/:productId
+  updateQuantity: async ({
+    productId,
+    quantity,
+    variantId,
+  }: {
+    productId: string;
+    quantity: number;
+    variantId?: string;
+  }) => {
+    const { data } = await apiClient.patch(`/cart/${productId}`, {
+      quantity,
+      variantId,
+    });
     return data;
   },
 
-  removeItem: async (payload: { productId: string; variantId?: string }) => {
-    // Axios DELETE requests pass bodies using the `data` property
-    const { data } = await apiClient.delete('/cart/items', { data: payload });
+  // Fixed: DELETE /cart/:productId
+  removeItem: async ({
+    productId,
+    variantId,
+  }: {
+    productId: string;
+    variantId?: string;
+  }) => {
+    const { data } = await apiClient.delete(`/cart/${productId}`, {
+      data: { variantId },
+    });
     return data;
   },
 
   clearCart: async () => {
-    const { data } = await apiClient.delete('/cart');
+    const { data } = await apiClient.delete("/cart");
     return data;
   },
 
-  // Call this right after a successful user login!
   mergeCart: async () => {
-    const { data } = await apiClient.post('/cart/merge');
+    const { data } = await apiClient.post("/cart/merge");
     return data;
-  }
+  },
 };
