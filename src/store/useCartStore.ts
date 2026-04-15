@@ -60,33 +60,36 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      syncCart: async () => {
+     syncCart: async () => {
         const { items, fetchCart } = get();
         const currentUser = useAuthStore.getState().user;
         
         if (!currentUser) return;
-        if (items.length === 0) {
-          await fetchCart();
-          return;
-        }
-
-        try {
-          // Sync all local guest items to the backend in parallel
-          // ADD THIS INSTEAD:
-          // Sync items sequentially to prevent DB Cart creation race conditions
-          for (const item of items) {
-            await CartService.addToCart({
-              productId: item.productId,
-              variantId: item.variantId,
-              quantity: item.quantity
-            });
-          }
-
-          await fetchCart();
-        } catch (err) {
-          console.error("Cart Sync failed:", err);
-        }
         
+        // 1. If local cart has items, send them ALL in one network request
+        if (items.length > 0) {
+          try {
+            const payload = items.map((i: CartItem) => ({
+              productId: i.productId,
+              variantId: i.variantId,
+              quantity: i.quantity
+            }));
+
+            // 🔥 Make sure you add this method to your CartService!
+            // e.g., await apiClient.post('/cart/merge', { items: payload })
+            await CartService.mergeCart({ items: payload });
+
+            // 🔥 CRITICAL: Wipe local ghost items immediately after successful merge
+            // This guarantees idempotency (no duplicate merges on double clicks)
+            set({ items: [] });
+          } catch (err) {
+            console.error("Cart Sync failed:", err);
+            return; // Abort fetchCart if sync failed so we don't lose local items
+          }
+        }
+
+        // 2. Fetch the final unified DB cart
+        await fetchCart();
       },
 
       addItem: async (newItem: CartItem) => {

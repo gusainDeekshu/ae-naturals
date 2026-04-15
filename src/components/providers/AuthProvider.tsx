@@ -24,6 +24,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // 🔥 2. Restore Auth State in Zustand
         setAuth(data.user, data.access_token);
+        const { syncCart } = useCartStore.getState();
+        await syncCart();
         
         // 🔥 3. Fetch the cart now that we are securely authenticated
         await fetchCart(); 

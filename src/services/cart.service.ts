@@ -13,7 +13,7 @@ export const CartService = {
   addToCart: async (payload: AddToCartPayload) => {
     // ❌ OLD: await apiClient.post('/cart/add', payload);
     // ✅ NEW: Use the correct REST endpoint
-    const { data } = await apiClient.post("/cart", payload);
+    const { data } = await apiClient.post("/cart/add", payload);
     return data;
   },
 
@@ -53,8 +53,8 @@ export const CartService = {
     return data;
   },
 
-  mergeCart: async () => {
-    const { data } = await apiClient.post("/cart/merge");
+  mergeCart: async (payload: { items: AddToCartPayload[] }) => {
+    const { data } = await apiClient.post("/cart/merge", payload);
     return data;
   },
 };
