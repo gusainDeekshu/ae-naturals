@@ -3,27 +3,24 @@
 "use client";
 
 import React from "react";
-
-// --- IMPORTS ---
 import { HeroBanner } from "@/components/home/HeroBanner";
-import { CategoryTabs } from "@/components/home/CategoryTabs";
-import { ProductGrid } from "@/components/home/ProductGrid";
-import { BundleBuilder } from "@/components/home/BundleBuilder";
-import { TrustBadges } from "@/components/home/TrustBadges";
-import { HomeCollections } from "@/components/home/HomeCollections";
-// 🔥 ADD THE NEW IMPORT HERE
-import HomeBlogSection from "@/components/home/HomeBlogSection";
 
+import HomeBlogSection from "@/components/home/HomeBlogSection";
+import { ProductCarousel } from "./ProductCarousel";
+import { PromotionalBanner } from "./PromotionalBanner";
+import { TrustTicker } from "./TrustTicker";
+import { CategoryShowcase } from "./CategoryShowcase";
+import { BrandStory } from "./BrandStory";
+
+// 🌟 Dynamic Section Map
 const SECTION_MAP: Record<string, React.FC<any>> = {
   HERO: HeroBanner,
-  CATEGORIES: CategoryTabs,
-  FEATURED_PRODUCTS: ProductGrid,
-  // BUNDLE_BUILDER: BundleBuilder,
+  CATEGORIES: CategoryShowcase,
+  PRODUCT_CAROUSEL: ProductCarousel, // Used for Bestsellers, Deals, etc.
+  PROMO_BANNER: PromotionalBanner, 
+  TRUST_BADGES: TrustTicker,
+  BRAND_STORY: BrandStory,
   BLOG_SECTION: HomeBlogSection,
-
-  TRUST_BADGES: TrustBadges,
-  COLLECTIONS: HomeCollections,
-  // 🔥 MAP THE NEW BLOG COMPONENT
 };
 
 interface HomeRendererProps {
@@ -31,7 +28,7 @@ interface HomeRendererProps {
     sectionsOrder: Array<{
       id: string;
       type: string;
-      settings?: any;
+      settings?: any; // e.g., { title: "Bestsellers", showViewAll: true }
     }>;
   };
   data: any;
@@ -40,26 +37,24 @@ interface HomeRendererProps {
 export default function HomeRenderer({ config, data }: HomeRendererProps) {
   if (!config?.sectionsOrder || !Array.isArray(config.sectionsOrder)) {
     return (
-      <div className="flex h-64 items-center justify-center text-gray-400">
-        No homepage configuration found.
+      <div className="flex h-[50vh] items-center justify-center text-gray-400 font-medium tracking-widest uppercase text-sm">
+        Storefront Initializing...
       </div>
     );
   }
 
   return (
-    <main className="w-full flex flex-col gap-y-8 pb-16">
+    <main className="w-full flex flex-col gap-y-16 md:gap-y-24 pb-20 bg-white">
       {config.sectionsOrder.map((section) => {
         const Component = SECTION_MAP[section.type];
 
         if (!Component) {
-          console.warn(
-            `[HomeRenderer] Missing component for section type: ${section.type}`,
-          );
+          console.warn(`[HomeRenderer] Unmapped CMS section: ${section.type}`);
           return null;
         }
 
-        // Explicitly map the section type to the correct array from NestJS
-        let sectionData: any[] = [];
+        // 🌟 Map the data dynamically based on what the section needs
+        let sectionData: any = null;
 
         switch (section.type) {
           case "HERO":
@@ -68,31 +63,32 @@ export default function HomeRenderer({ config, data }: HomeRendererProps) {
           case "CATEGORIES":
             sectionData = data.collections || [];
             break;
-          case "FEATURED_PRODUCTS":
-            sectionData = data.featuredProducts || [];
+          case "PRODUCT_CAROUSEL":
+            // Admin can use settings.dataSource to pick which array to map
+            const source = section.settings?.dataSource || "featuredProducts";
+            sectionData = data[source] || [];
             break;
-          case "COLLECTIONS":
-            sectionData = data.collections || [];
+          case "PROMO_BANNER":
+            sectionData = section.settings; // Banners usually live entirely in settings
             break;
-          case "BUNDLE_BUILDER":
-            sectionData = data.featuredProducts || [];
+          case "BRAND_STORY":
+            sectionData = section.settings;
             break;
-
-          // 🔥 ADD THE BLOG CASE HERE
           case "BLOG_SECTION":
             sectionData = data.blogs || [];
             break;
           case "TRUST_BADGES":
-            sectionData = [];
+            sectionData = []; // Purely static or pulled from global config
             break;
         }
 
         return (
-          <Component
-            key={section.id}
-            data={sectionData}
-            settings={section.settings}
-          />
+          <section key={section.id} className="w-full">
+            <Component
+              data={sectionData}
+              settings={section.settings || {}}
+            />
+          </section>
         );
       })}
     </main>
