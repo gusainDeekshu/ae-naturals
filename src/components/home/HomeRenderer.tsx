@@ -13,6 +13,7 @@ import { BrandStory } from "./BrandStory";
 import { FeaturedProducts } from "./FeaturedProducts";
 import {HomeBlogSection} from "./HomeBlogSection";
 import { CollectionsShowcase } from "./CollectionsShowcase";
+import { VideoShoppableSection } from "./VideoShoppableSection";
 
 
 // 1. REGISTRY: Maps Admin block types to your actual React components
@@ -25,6 +26,8 @@ const SECTION_COMPONENTS: Record<string, React.FC<any>> = {
   TRUST_BADGES: TrustTicker,
   BRAND_STORY: BrandStory,
   BLOG_SECTION: HomeBlogSection,
+  VIDEO_SHOPPABLE: VideoShoppableSection,
+
 };
 
 interface HomeRendererProps {
@@ -110,6 +113,10 @@ function resolveData(section: any, data: any) {
     case 'HERO':
     case 'PROMO_BANNER':
       return data?.banners || [];
+
+       case "VIDEO_SHOPPABLE":
+      // The video data is stored directly in the admin block settings now!
+      return settings.slides || [];
 
     default:
       return null;
