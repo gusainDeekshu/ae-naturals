@@ -1,140 +1,124 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { CheckCircle2, Truck, Package, Home, AlertCircle, Loader2 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { CheckCircle2, Truck, Package, Clock, AlertCircle } from "lucide-react";
 
-interface TrackingTimelineProps {
-  awbCode: string;
+// 1. Define the expected structure of the API response
+interface TrackingData {
+  orderStatus: string;
+  message?: string;
+  shipmentDetails: {
+    courier: string;
+    awbCode: string;
+    trackingUrl: string | null;
+    status: string;
+  } | null;
+  liveTracking: any | null;
 }
 
-export default function TrackingTimeline({ awbCode }: TrackingTimelineProps) {
-  const [trackingData, setTrackingData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchTracking = async () => {
-      try {
-        const response = await apiClient.get(`/shipping/track/${awbCode}`);
-        setTrackingData(response.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Tracking data unavailable.');
-      } finally {
-        setLoading(false);
+export default function TrackingTimeline({ orderId }: { orderId: string }) {
+  // 2. Pass the type to useQuery so TypeScript knows what 'data' looks like
+  const { data, isLoading, error } = useQuery<TrackingData>({
+    queryKey: ["order-tracking", orderId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/orders/${orderId}/tracking`);
+      return res.data;
+    },
+    // 3. In React Query v5, refetchInterval receives the entire Query object
+    refetchInterval: (query) => {
+      const currentData = query.state.data;
+      if (currentData?.orderStatus === 'SHIPPED' || currentData?.orderStatus === 'PROCESSING') {
+        return 30000; // Poll every 30 seconds
       }
-    };
+      return false; // Stop polling
+    },
+  });
 
-    if (awbCode) fetchTracking();
-  }, [awbCode]);
+  if (isLoading) {
+    return <div className="animate-pulse flex space-x-4 p-4">Loading live tracking...</div>;
+  }
 
-  if (loading) {
+  if (error || !data) {
     return (
-      <div className="flex items-center justify-center p-8 space-x-2 text-green-600">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="font-medium">Fetching live tracking...</span>
+      <div className="text-red-500 flex items-center gap-2 p-4">
+        <AlertCircle className="h-5 w-5" /> Failed to load tracking data.
       </div>
     );
   }
 
-  if (error || !trackingData) {
-    return (
-      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5" />
-        <div>
-          <p className="font-semibold text-orange-800">Tracking update pending</p>
-          <p className="text-sm text-orange-600">AWB: {awbCode}</p>
-          <p className="text-xs text-orange-500 mt-1">It may take a few hours for the courier to update their system.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Shiprocket sends a 1 (Delivered), 6 (Shipped), etc.
-  const currentStatusId = trackingData.shipment_status; 
-  const isDelivered = currentStatusId === 7 || trackingData.shipment_track[0]?.current_status === 'Delivered';
-
-  // Define our ideal Flipkart-style pipeline
-  const steps = [
-    { title: 'Order Placed', icon: Package, isCompleted: true },
-    { title: 'Packed & Ready', icon: Package, isCompleted: currentStatusId >= 2 },
-    { title: 'Shipped', icon: Truck, isCompleted: currentStatusId >= 6 },
-    { title: 'Out for Delivery', icon: Truck, isCompleted: currentStatusId === 17 || isDelivered },
-    { title: 'Delivered', icon: Home, isCompleted: isDelivered },
-  ];
-
-  const scans = trackingData.shipment_track_activities || [];
+  const { orderStatus, shipmentDetails, liveTracking } = data;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6 w-full max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mb-6 pb-4 border-b">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">Track Shipment</h3>
-          <p className="text-sm text-gray-500">AWB: {awbCode}</p>
+    <div className="bg-white rounded-lg border p-6 mt-4 shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">Shipment Tracking</h3>
+      
+      {/* Shipment Meta */}
+      {shipmentDetails ? (
+        <div className="flex flex-wrap gap-4 text-sm bg-gray-50 p-3 rounded-md mb-6 border">
+          <p><strong>Courier:</strong> {shipmentDetails.courier}</p>
+          <p><strong>AWB Code:</strong> <span className="font-mono text-blue-600">{shipmentDetails.awbCode}</span></p>
+          {shipmentDetails.trackingUrl && (
+            <a 
+              href={shipmentDetails.trackingUrl} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="text-blue-600 hover:underline"
+            >
+              Track on Courier Website
+            </a>
+          )}
         </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-gray-500">Courier Partner</p>
-          <p className="text-sm font-bold text-gray-900">{trackingData.shipment_track[0]?.courier_name || 'Assigned'}</p>
+      ) : (
+        <div className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-md mb-6">
+          {data.message || "We are preparing your shipment. Check back soon!"}
         </div>
-      </div>
+      )}
 
-      {/* Vertical Timeline */}
-      <div className="relative pl-4">
-        {steps.map((step, index) => {
-          const Icon = step.icon;
-          const isLast = index === steps.length - 1;
-          const isActive = step.isCompleted;
+      {/* Live Timeline */}
+      <div className="relative border-l-2 border-gray-200 ml-3 space-y-6">
+        
+        {/* Step 1: Order Placed */}
+        <div className="relative pl-6">
+          <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-green-500 ring-4 ring-white" />
+          <p className="font-semibold text-gray-800 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" /> Order Confirmed
+          </p>
+          <p className="text-xs text-gray-500">Your payment was successful.</p>
+        </div>
 
-          return (
-            <div key={index} className="flex relative pb-8">
-              {/* Connecting Line */}
-              {!isLast && (
-                <div 
-                  className={`absolute left-[11px] top-8 bottom-0 w-[2px] ${
-                    steps[index + 1].isCompleted ? 'bg-green-500' : 'bg-gray-200'
-                  }`} 
-                />
-              )}
+        {/* Step 2: Processing */}
+        {orderStatus === 'PROCESSING' || orderStatus === 'SHIPPED' || orderStatus === 'DELIVERED' ? (
+          <div className="relative pl-6">
+            <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-white" />
+            <p className="font-semibold text-gray-800 flex items-center gap-2">
+              <Package className="h-4 w-4 text-blue-500" /> Packed & Ready
+            </p>
+            <p className="text-xs text-gray-500">Your order has been packed and AWB generated.</p>
+          </div>
+        ) : null}
 
-              {/* Dot / Icon */}
-              <div className="relative z-10 flex-shrink-0 mr-4">
-                <div className={`h-6 w-6 rounded-full flex items-center justify-center border-2 ${
-                  isActive ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'
-                }`}>
-                  {isActive ? (
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : (
-                    <div className="h-2 w-2 rounded-full bg-gray-300" />
-                  )}
-                </div>
-              </div>
+        {/* Step 3: Shiprocket Live API Events */}
+        {liveTracking && liveTracking.tracking_data?.track_status === 1 ? (
+           liveTracking.tracking_data.shipment_track_activities.map((activity: any, index: number) => (
+             <div key={index} className="relative pl-6">
+               <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-purple-500 ring-4 ring-white" />
+               <p className="font-semibold text-gray-800">{activity.activity}</p>
+               <p className="text-xs text-gray-500 flex items-center gap-1">
+                 <Clock className="h-3 w-3" /> {activity.date} - {activity.location}
+               </p>
+             </div>
+           ))
+        ) : orderStatus === 'SHIPPED' && !liveTracking ? (
+          <div className="relative pl-6">
+            <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-gray-300 ring-4 ring-white" />
+            <p className="font-semibold text-gray-800 flex items-center gap-2">
+              <Truck className="h-4 w-4 text-gray-500" /> Shipped
+            </p>
+            <p className="text-xs text-gray-500">Waiting for live updates from {shipmentDetails?.courier || 'the courier'}.</p>
+          </div>
+        ) : null}
 
-              {/* Content */}
-              <div>
-                <h4 className={`text-base font-semibold ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
-                  {step.title}
-                </h4>
-                
-                {/* Show detailed scan activity if this is the currently active step */}
-                {isActive && index === 2 && scans.length > 0 && (
-                  <div className="mt-3 space-y-3 bg-gray-50 p-3 rounded-lg text-sm border">
-                    {scans.slice(0, 3).map((scan: any, i: number) => (
-                      <div key={i} className="flex gap-3 text-gray-600">
-                        <span className="min-w-[120px] text-xs text-gray-500">
-                          {new Date(scan.date).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}
-                        </span>
-                        <div>
-                          <p className="font-medium text-gray-800">{scan.activity}</p>
-                          <p className="text-xs">{scan.location}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

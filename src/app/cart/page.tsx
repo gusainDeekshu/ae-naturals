@@ -9,9 +9,10 @@ import { addressService, Address } from "@/services/address.service";
 import { paymentService } from "@/services/payment.service";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
-import { Loader2, Truck } from "lucide-react";
+import { Loader2, ShoppingBag, Truck } from "lucide-react";
 import { PaymentInitiateResponse } from "@/types/payment";
 import { executePaymentFlow } from "@/lib/payment-handler";
+import Link from "next/link";
 
 interface CourierOption {
   courierPartnerId?: string; 
@@ -286,9 +287,16 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0) {
-    return (
-      <div className="p-8 text-center text-gray-500 font-medium mt-10">
-        Your cart is empty. Please add items to proceed.
+   return (
+      <div className="flex flex-col items-center justify-center py-20 min-h-[60vh]">
+        <ShoppingBag size={80} className="text-gray-200 mb-6" />
+        <h2 className="text-2xl font-bold text-gray-800">Your cart is empty</h2>
+        <p className="text-gray-500 mb-8">Add some beautiful products to get started!</p>
+        <Link href="/">
+          <Button className="bg-[#217A6E] hover:bg-[#004d3d] px-8 py-6 text-lg rounded-xl">
+            Continue Shopping
+          </Button>
+        </Link>
       </div>
     );
   }
