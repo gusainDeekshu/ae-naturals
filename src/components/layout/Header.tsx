@@ -159,9 +159,9 @@ export function Header({ megaMenu }: HeaderProps) {
                   </div>
                   
                   <div className="px-2 py-1">
-                    <Link href="/orders" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl hover:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors">
+                    {/* <Link href="/orders" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl hover:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors">
                       <Package size={16} /> My Orders
-                    </Link>
+                    </Link> */}
                     <Link href="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl hover:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors">
                       <Settings size={16} /> Profile Settings
                     </Link>
