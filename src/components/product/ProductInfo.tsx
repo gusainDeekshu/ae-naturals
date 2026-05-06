@@ -8,19 +8,13 @@ import { useCartStore } from "@/store/useCartStore"; // 1. Import Zustand store
 export default function ProductInfo({ product }: { product: any }) {
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false); // 2. Add loading state
-  
+
   // 3. Variant state management to prevent API failures
   const [selectedVariant, setSelectedVariant] = useState<any>(
-    product.variants?.length > 0 ? product.variants[0] : null
+    product.variants?.length > 0 ? product.variants[0] : null,
   );
 
   const addItem = useCartStore((s) => s.addItem);
-
-  // Dynamic discount calculation
-  const discount =
-    product.oldPrice > product.price
-      ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
-      : 0;
 
   const renderStars = (rating: number) => {
     const fullStars = Math.floor(rating || 0);
@@ -34,7 +28,9 @@ export default function ProductInfo({ product }: { product: any }) {
         ))}
         {hasHalfStar && <span>⯪</span>}
         {[...Array(emptyStars)].map((_, i) => (
-          <span key={`empty-${i}`} className="text-gray-300">★</span>
+          <span key={`empty-${i}`} className="text-gray-300">
+            ★
+          </span>
         ))}
       </div>
     );
@@ -50,8 +46,8 @@ export default function ProductInfo({ product }: { product: any }) {
       await addItem({
         productId: product.id,
         variantId: selectedVariant?.id,
-        name: selectedVariant 
-          ? `${product.name} - ${selectedVariant.name}` 
+        name: selectedVariant
+          ? `${product.name} - ${selectedVariant.name}`
           : product.name,
         price: product.price,
         image: product.images?.[0] || "",
@@ -61,6 +57,17 @@ export default function ProductInfo({ product }: { product: any }) {
       setIsAdding(false);
     }
   };
+
+  // STRICT BACKWARD COMPATIBILITY RULE ON FRONTEND
+  const activePrice =
+    selectedVariant?.price ??
+    product.price + (selectedVariant?.priceModifier || 0);
+  const activeOldPrice = selectedVariant?.oldPrice ?? product.oldPrice;
+
+  const discount =
+    activeOldPrice > activePrice
+      ? Math.round(((activeOldPrice - activePrice) / activeOldPrice) * 100)
+      : 0;
 
   return (
     <div className="flex flex-col space-y-6">
@@ -81,12 +88,12 @@ export default function ProductInfo({ product }: { product: any }) {
       <div className="flex flex-col border-y border-gray-100 py-4">
         <div className="flex items-baseline space-x-3">
           <span className="text-3xl font-bold text-gray-900">
-            ₹{product.price?.toLocaleString("en-IN") || 0}
+            ₹{activePrice?.toLocaleString("en-IN") || 0}
           </span>
-          {discount > 0 && (
+          {discount > 0 && activeOldPrice && (
             <>
               <span className="text-lg text-gray-500 line-through">
-                ₹{product.oldPrice?.toLocaleString("en-IN")}
+                ₹{activeOldPrice?.toLocaleString("en-IN")}
               </span>
               <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-1 rounded">
                 {discount}% OFF
@@ -94,7 +101,6 @@ export default function ProductInfo({ product }: { product: any }) {
             </>
           )}
         </div>
-        <p className="text-sm text-gray-500 mt-1">Inclusive of all taxes</p>
       </div>
 
       {/* Variants (Now Interactive) */}
@@ -142,15 +148,20 @@ export default function ProductInfo({ product }: { product: any }) {
         </div>
         <div className="flex flex-col space-y-3">
           {/* 5. Wired Button with Loading State */}
-          <button 
+          <button
             onClick={handleAddToCart}
-            disabled={isAdding || (product.variants?.length > 0 && !selectedVariant)}
+            disabled={
+              isAdding || (product.variants?.length > 0 && !selectedVariant)
+            }
             className="w-full flex justify-center items-center space-x-2 bg-[#FFD814] hover:bg-[#F7CA00] text-gray-900 font-medium py-3 px-6 rounded-full shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isAdding ? <Loader2 className="animate-spin" size={18} /> : <ShoppingCart size={18} />}
+            {isAdding ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <ShoppingCart size={18} />
+            )}
             <span>{isAdding ? "Adding to Cart..." : "Add to Cart"}</span>
           </button>
-          
         </div>
       </div>
     </div>

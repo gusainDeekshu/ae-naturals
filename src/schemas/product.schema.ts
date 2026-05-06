@@ -7,12 +7,17 @@ export const ProductAttributeSchema = z.object({
   value: z.string(),
 });
 
+
+
 export const ProductVariantSchema = z.object({
   id: z.string(),
   name: z.string(),
-  priceModifier: z.number(),
+  price: z.number(), // Added strict price
+  oldPrice: z.number().nullable().optional(),
   stock: z.number(),
 });
+
+
 
 export const ProductSchema = z
   .object({
@@ -22,8 +27,7 @@ export const ProductSchema = z
 
     description: z.string().nullable().optional(),
 
-    price: z.number(),
-    oldPrice: z.number().nullable().optional(),
+    variants: z.array(ProductVariantSchema).min(1),
 
     // Support both single image (from your Prisma) and images array
     image: z.string().optional(),
@@ -43,7 +47,6 @@ export const ProductSchema = z
     storeId: z.string(),
 
     attributes: z.array(ProductAttributeSchema).optional(),
-    variants: z.array(ProductVariantSchema).optional(),
 
     // NEW: Allow the "extra" data we created for A+ content to pass validation
     extra: z.any().optional(),

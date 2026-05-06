@@ -11,24 +11,34 @@ interface ProductCardProps {
     id: string;
     name: string;
     slug: string;
-    price: number;
-    oldPrice?: number;
     images: string[];
     rating?: number;
     reviewCount?: number;
     category?: { name: string } | string;
-    stock?: number;
-    variants?: any[]; // Added to support stock checking
+    variants: any[]; // Strictly required in the new architecture
   };
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  // Logic for discount
-  const discountPercent = product.oldPrice
-    ? Math.round(
-        ((product.oldPrice - product.price) / product.oldPrice) * 100
-      )
-    : 0;
+  // 1. Derive base pricing entirely from variants
+  const variants = product.variants || [];
+
+  const cheapestVariant =
+    variants.length > 0
+      ? variants.reduce(
+          (prev, curr) => (prev.price < curr.price ? prev : curr),
+          variants[0],
+        )
+      : null;
+
+  const currentPrice = cheapestVariant?.price || 0;
+  const oldPrice = cheapestVariant?.oldPrice;
+
+  // 2. Calculate discount safely from the variant's prices
+  const discountPercent =
+    oldPrice && oldPrice > currentPrice
+      ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
+      : 0;
 
   // Logic for category name
   const categoryName =
@@ -36,8 +46,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       ? product.category
       : product.category?.name;
 
-  // Default to the first variant if available
-  const [selectedVariant] = useState(product.variants?.[0] || null);
+  // Default to the first variant if available for the AddToCart payload
+  const [selectedVariant] = useState(variants[0] || null);
 
   return (
     <article
@@ -98,14 +108,17 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         <div className="flex-grow" />
 
-        {/* Pricing */}
-        <div className="mt-3 flex items-center gap-2">
+        {/* Pricing (Derived strictly from Variants) */}
+        <div className="mt-3 flex items-baseline gap-2">
+          {variants.length > 1 && (
+            <span className="text-xs font-medium text-neutral-500">From</span>
+          )}
           <span className="text-base sm:text-lg font-semibold text-neutral-900">
-            ₹{product.price.toLocaleString("en-IN")}
+            ₹{currentPrice.toLocaleString("en-IN")}
           </span>
-          {product.oldPrice && (
+          {oldPrice && (
             <span className="text-xs sm:text-sm text-neutral-400 line-through">
-              ₹{product.oldPrice.toLocaleString("en-IN")}
+              ₹{oldPrice.toLocaleString("en-IN")}
             </span>
           )}
         </div>
@@ -116,12 +129,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             product={{
               id: product.id,
               name: product.name,
-              price: product.price,
+              price: currentPrice, // Injected resolved variant price
               images: product.images,
-              variants: (product as any).variants || [], // Correct object property
+              variants: variants,
             }}
-            variantId={selectedVariant?.id} // Correct prop placement
-            stock={product.stock}
+            variantId={selectedVariant?.id}
+            stock={selectedVariant?.stock || 0} // Injected resolved variant stock
           />
         </div>
       </div>

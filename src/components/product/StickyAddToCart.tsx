@@ -1,19 +1,27 @@
 // src\components\product\StickyAddToCart.tsx
-
+// src/components/product/StickyAddToCart.tsx
 "use client";
 
-import { Product } from '@/types/product';
+export default function StickyAddToCart({ product }: { product: any }) {
+  // 1. Derive base pricing entirely from variants
+  const variants = product?.variants || [];
+  
+  const cheapestVariant = variants.length > 0 
+    ? variants.reduce((prev: any, curr: any) => (prev.price < curr.price ? prev : curr), variants[0])
+    : null;
 
-export default function StickyAddToCart({ product }: { product: Product }) {
+  const currentPrice = cheapestVariant?.price || 0;
+  const oldPrice = cheapestVariant?.oldPrice;
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 z-50 flex items-center justify-between gap-4">
       <div className="flex flex-col">
         <span className="text-lg font-bold text-gray-900 leading-none">
-          ₹{product.price.toLocaleString('en-IN')}
+           ₹{currentPrice.toLocaleString('en-IN')}
         </span>
-        {product.oldPrice > product.price && (
+        {oldPrice && oldPrice > currentPrice && (
           <span className="text-xs text-green-600 font-medium mt-1">
-            Save ₹{(product.oldPrice - product.price).toLocaleString('en-IN')}
+            Save ₹{(oldPrice - currentPrice).toLocaleString('en-IN')}
           </span>
         )}
       </div>
