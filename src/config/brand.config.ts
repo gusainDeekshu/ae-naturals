@@ -2,11 +2,15 @@
 
 export const BRAND = {
   name: "AE Naturals",
-  logo: "https://res.cloudinary.com/djunjtr5l/image/upload/v1776334600/ChatGPT_Image_Apr_16_2026_03_45_35_PM_kz8gfw.png", // <-- Add your logo here (emoji or image path)
+  logo: "https://aenaturals.in/image/logo.png", // <-- Add your logo here (emoji or image path)
 
   phone: "+91 8553463261",
   whatsapp: "+91 8553463261",
   email: "care@aenaturals.in",
+
+
+
+
 
   address:
     "39/4, near Global Village front gate, Pattanagere, Rajarajeshwari Nagar, Bengaluru, Karnataka 560059",
