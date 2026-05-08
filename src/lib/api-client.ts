@@ -1,6 +1,7 @@
 // src/lib/api-client.ts
 import axios from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
+import * as Sentry from '@sentry/nextjs';
 
 // This "Augmentation" tells TS that axios methods return the data directly
 declare module "axios" {
@@ -67,6 +68,20 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    // Report unexpected backend failures to Sentry
+    if (error.response && error.response.status !== 401 && error.response.status !== 404) {
+      Sentry.captureException(error, {
+        tags: {
+          api_endpoint: originalRequest?.url,
+          http_status: error.response.status,
+        },
+        extra: {
+          method: originalRequest?.method,
+          requestData: originalRequest?.data ? JSON.stringify(originalRequest.data) : null,
+          responseData: error.response.data,
+        },
+      });
+    }
 
     // 🚨 FIX 1: Prevent infinite loops if the refresh endpoint itself fails
     if (originalRequest.url?.includes('/auth/refresh')) {

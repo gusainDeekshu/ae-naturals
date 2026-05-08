@@ -1,6 +1,6 @@
-// src/store/useAuthStore.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import * as Sentry from "@sentry/nextjs";
 
 interface User {
   id: string;
@@ -10,7 +10,6 @@ interface User {
 }
 
 interface AuthState {
-  // 🗑️ REMOVED: token: any; (We don't need this anymore, we use accessToken)
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
@@ -30,25 +29,32 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       _hasHydrated: false,
 
-      setAuth: (user, token) =>
+      setAuth: (user, token) => {
+        Sentry.setUser({ id: user.id, email: user.email, role: user.role });
         set({
           user,
           accessToken: token,
           isAuthenticated: !!token, 
-        }),
+        });
+      },
 
       setAccessToken: (token) => set({ accessToken: token, isAuthenticated: true }),
 
-      setGuest: () => set({ user: null, accessToken: null, isAuthenticated: false }),
+      setGuest: () => {
+        Sentry.setUser(null);
+        set({ user: null, accessToken: null, isAuthenticated: false });
+      },
 
       setHasHydrated: (state) => set({ _hasHydrated: state }),
 
-      logout: () =>
+      logout: () => {
+        Sentry.setUser(null);
         set({
           user: null,
           accessToken: null,
           isAuthenticated: false,
-        }),
+        });
+      },
     }),
     {
       name: "flower-fairy-auth",

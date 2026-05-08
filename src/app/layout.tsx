@@ -7,6 +7,9 @@ import QueryProvider from "@/components/providers/QueryProvider";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import MegaMenu from "@/components/layout/MegaMenu";
+// Observability Imports
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // 🔥 NEW: Import the Search Modal
 import SearchModal from "@/components/layout/SearchModal"; 
@@ -60,6 +63,9 @@ export default function RootLayout({
             </AuthProvider>
           </QueryProvider>
         </div>
+        {/* Vercel Observability */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
-// src/lib/payment-handler.ts
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { toast } from "sonner";
 import { PaymentInitiateResponse } from "@/types/payment";
+import * as Sentry from "@sentry/nextjs";
 
 export const executePaymentFlow = (
   rawResponse: any, 
@@ -9,11 +9,11 @@ export const executePaymentFlow = (
   router: AppRouterInstance
 ) => {
   if (!rawResponse) {
+    Sentry.captureMessage("Empty payment response from server", { level: "error", extra: { orderId } });
     toast.error("Invalid payment response from server");
     return;
   }
 
-  // 🔥 THE ADAPTER: Automatically shape the raw backend payload into our strict contract
   let res: PaymentInitiateResponse = rawResponse;
 
   if (rawResponse.provider === "PAYU" && rawResponse.formPayload) {
@@ -24,20 +24,25 @@ export const executePaymentFlow = (
       params: { ...rawResponse.formPayload }
     };
     if (res.params) {
-      delete res.params.actionUrl; // Don't send the URL as a hidden input
+      delete res.params.actionUrl; 
     }
   }
 
-  // 🔥 THE EXECUTOR: Route based on the flow instruction
   switch (res.flow) {
     case "REDIRECT":
-      if (!res.url) throw new Error("Redirect URL missing from provider");
+      if (!res.url) {
+        Sentry.captureException(new Error("Redirect URL missing from provider"), { extra: { res, orderId } });
+        throw new Error("Redirect URL missing from provider");
+      }
       toast.loading(`Redirecting to ${res.provider}...`);
       window.location.href = res.url;
       break;
 
     case "FORM":
-      if (!res.url || !res.params) throw new Error("Form configuration missing");
+      if (!res.url || !res.params) {
+        Sentry.captureException(new Error("Form configuration missing"), { extra: { res, orderId } });
+        throw new Error("Form configuration missing");
+      }
       toast.loading(`Connecting to secure payment gateway...`);
       
       const form = document.createElement("form");
@@ -65,10 +70,13 @@ export const executePaymentFlow = (
       break;
 
     default:
-      // Fallback if the backend sends an older/unknown structure
       if (res.url || rawResponse.checkoutUrl) {
          window.location.href = res.url || rawResponse.checkoutUrl;
       } else {
+         Sentry.captureMessage("Unknown Payment Gateway Payload", { 
+           level: "fatal", 
+           extra: { rawResponse, orderId } 
+         });
          console.error("Unknown payment flow:", res);
          toast.error("Payment routing failed. Please contact support.");
       }
