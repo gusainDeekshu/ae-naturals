@@ -46,3 +46,5 @@ next-env.d.ts
 /public/favicon-192x192.png
 
 /src/config/brand.config.ts
+# Sentry Config File
+.env.sentry-build-plugin
