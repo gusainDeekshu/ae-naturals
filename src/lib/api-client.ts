@@ -1,24 +1,42 @@
 // src/lib/api-client.ts
-import axios from 'axios';
-import { useAuthStore } from '@/store/useAuthStore';
-import * as Sentry from '@sentry/nextjs';
+import axios from "axios";
+import { useAuthStore } from "@/store/useAuthStore";
+import * as Sentry from "@sentry/nextjs";
 
 // This "Augmentation" tells TS that axios methods return the data directly
 declare module "axios" {
   export interface AxiosInstance {
     request<T = any, R = T>(config: AxiosRequestConfig): Promise<R>;
     get<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
-    delete<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
+    delete<T = any, R = T>(
+      url: string,
+      config?: AxiosRequestConfig,
+    ): Promise<R>;
     head<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
-    options<T = any, R = T>(url: string, config?: AxiosRequestConfig): Promise<R>;
-    post<T = any, R = T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<R>;
-    put<T = any, R = T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<R>;
-    patch<T = any, R = T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<R>;
+    options<T = any, R = T>(
+      url: string,
+      config?: AxiosRequestConfig,
+    ): Promise<R>;
+    post<T = any, R = T>(
+      url: string,
+      data?: any,
+      config?: AxiosRequestConfig,
+    ): Promise<R>;
+    put<T = any, R = T>(
+      url: string,
+      data?: any,
+      config?: AxiosRequestConfig,
+    ): Promise<R>;
+    patch<T = any, R = T>(
+      url: string,
+      data?: any,
+      config?: AxiosRequestConfig,
+    ): Promise<R>;
   }
 }
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: new URL(process.env.NEXT_PUBLIC_API_URL!).toString(),
   withCredentials: true, // Forces browser to send HttpOnly cookies
 });
 
@@ -31,18 +49,19 @@ apiClient.interceptors.request.use((config) => {
   }
 
   // 2. Attach Guest Session ID (Crucial for the Cart API)
-  if (typeof window !== 'undefined') {
-    let sessionId = localStorage.getItem('guest_session_id');
-    
+  if (typeof window !== "undefined") {
+    let sessionId = localStorage.getItem("guest_session_id");
+
     if (!sessionId) {
-      sessionId = typeof crypto !== 'undefined' && crypto.randomUUID 
-        ? crypto.randomUUID() 
-        : `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      localStorage.setItem('guest_session_id', sessionId);
+      sessionId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem("guest_session_id", sessionId);
     }
-    
+
     // Add the header expected by the backend
-    config.headers['x-session-id'] = sessionId;
+    config.headers["x-session-id"] = sessionId;
   }
 
   return config;
@@ -53,7 +72,7 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
@@ -69,7 +88,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     // Report unexpected backend failures to Sentry
-    if (error.response && error.response.status !== 401 && error.response.status !== 404) {
+    if (
+      error.response &&
+      error.response.status !== 401 &&
+      error.response.status !== 404
+    ) {
       Sentry.captureException(error, {
         tags: {
           api_endpoint: originalRequest?.url,
@@ -77,14 +100,16 @@ apiClient.interceptors.response.use(
         },
         extra: {
           method: originalRequest?.method,
-          requestData: originalRequest?.data ? JSON.stringify(originalRequest.data) : null,
+          requestData: originalRequest?.data
+            ? JSON.stringify(originalRequest.data)
+            : null,
           responseData: error.response.data,
         },
       });
     }
 
     // 🚨 FIX 1: Prevent infinite loops if the refresh endpoint itself fails
-    if (originalRequest.url?.includes('/auth/refresh')) {
+    if (originalRequest.url?.includes("/auth/refresh")) {
       return Promise.reject(error);
     }
 
@@ -93,11 +118,11 @@ apiClient.interceptors.response.use(
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
-        .then(token => {
-          originalRequest.headers['Authorization'] = 'Bearer ' + token;
-          return apiClient(originalRequest);
-        })
-        .catch(err => Promise.reject(err));
+          .then((token) => {
+            originalRequest.headers["Authorization"] = "Bearer " + token;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
@@ -108,31 +133,32 @@ apiClient.interceptors.response.use(
         const { data } = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
           {},
-          { withCredentials: true } // Send the secure cookie
+          { withCredentials: true }, // Send the secure cookie
         );
-        
+
         // Save new access token to Zustand store
         useAuthStore.getState().setAuth(data.user, data.access_token);
-        
+
         // Process queue and retry failed requests
         processQueue(null, data.access_token);
-        originalRequest.headers['Authorization'] = `Bearer ${data.access_token}`;
-        
+        originalRequest.headers["Authorization"] =
+          `Bearer ${data.access_token}`;
+
         return apiClient(originalRequest);
       } catch (err) {
         processQueue(err, null);
-        
-        // Wipe frontend state
-        useAuthStore.getState().logout(); 
 
-        // 🚨 FIX 3: Stop redirecting to 404 '/login'. 
+        // Wipe frontend state
+        useAuthStore.getState().logout();
+
+        // 🚨 FIX 3: Stop redirecting to 404 '/login'.
         // Only kick the user to Home '/' if they are looking at protected data.
-        if (typeof window !== 'undefined') {
-          const protectedRoutes = ['/profile', '/checkout'];
+        if (typeof window !== "undefined") {
+          const protectedRoutes = ["/profile", "/checkout"];
           const currentPath = window.location.pathname;
-          
-          if (protectedRoutes.some(route => currentPath.startsWith(route))) {
-             window.location.href = '/'; 
+
+          if (protectedRoutes.some((route) => currentPath.startsWith(route))) {
+            window.location.href = "/";
           }
         }
 
@@ -143,5 +169,5 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
