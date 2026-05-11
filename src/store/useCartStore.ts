@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { CartService } from "@/services/cart.service";
 import { useAuthStore } from "./useAuthStore";
 import { toast } from "sonner";
+import { BRAND } from "@/config/brand.config";
 
 export interface CartItem {
   productId: string;
@@ -113,20 +114,25 @@ export const useCartStore = create<CartState>()(
         } else {
           // Guest: Manage state locally (Stock is checked on backend later during sync/checkout)
           const currentItems = get().items;
+
+          
           const existing = currentItems.find(
             (i: CartItem) => i.productId === newItem.productId && i.variantId === newItem.variantId
           );
 
+// 🔥 FIX: Force price to be a valid number to prevent payload poisoning
+          const safeItem = { ...newItem, price: newItem.price || 0 };
+
           if (existing) {
             set({
               items: currentItems.map((i: CartItem) =>
-                i.productId === newItem.productId && i.variantId === newItem.variantId
-                  ? { ...i, quantity: i.quantity + newItem.quantity }
+                i.productId === safeItem.productId && i.variantId === safeItem.variantId
+                  ? { ...i, quantity: i.quantity + safeItem.quantity, price: safeItem.price }
                   : i
               ),
             });
           } else {
-            set({ items: [...currentItems, newItem] });
+            set({ items: [...currentItems, safeItem] });
           }
         }
       },
@@ -179,7 +185,7 @@ export const useCartStore = create<CartState>()(
       },
     }),
     {
-      name: "flower-fairy-cart",
+      name: `${BRAND.useStoreName}-cart`,
       partialize: (state: CartState) => ({ items: state.items }),
     }
   )

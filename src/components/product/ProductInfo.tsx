@@ -14,6 +14,7 @@ export default function ProductInfo({ product }: { product: any }) {
     product.variants?.length > 0 ? product.variants[0] : null,
   );
 
+  
   const addItem = useCartStore((s) => s.addItem);
 
   const renderStars = (rating: number) => {
@@ -38,7 +39,6 @@ export default function ProductInfo({ product }: { product: any }) {
 
   // 4. Action Handler
   const handleAddToCart = async () => {
-    // Prevent adding if variants exist but none is selected
     if (product.variants?.length > 0 && !selectedVariant) return;
 
     setIsAdding(true);
@@ -49,7 +49,7 @@ export default function ProductInfo({ product }: { product: any }) {
         name: selectedVariant
           ? `${product.name} - ${selectedVariant.name}`
           : product.name,
-        price: product.price,
+        price: activePrice, // 🔥 FIX: Passed resolved activePrice instead of undefined product.price
         image: product.images?.[0] || "",
         quantity: quantity,
       });
@@ -59,10 +59,8 @@ export default function ProductInfo({ product }: { product: any }) {
   };
 
   // STRICT BACKWARD COMPATIBILITY RULE ON FRONTEND
-  const activePrice =
-    selectedVariant?.price ??
-    product.price + (selectedVariant?.priceModifier || 0);
-  const activeOldPrice = selectedVariant?.oldPrice ?? product.oldPrice;
+ const activePrice = selectedVariant?.price ?? 0;
+  const activeOldPrice = selectedVariant?.oldPrice ?? 0;
 
   const discount =
     activeOldPrice > activePrice
@@ -153,7 +151,7 @@ export default function ProductInfo({ product }: { product: any }) {
             disabled={
               isAdding || (product.variants?.length > 0 && !selectedVariant)
             }
-            className="w-full flex justify-center items-center space-x-2 bg-[#FFD814] hover:bg-[#F7CA00] text-gray-900 font-medium py-3 px-6 rounded-full shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex justify-center items-center space-x-2 bg-[#006044] hover:bg-[#004d36] text-white font-medium py-3 px-6 rounded-full shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isAdding ? (
               <Loader2 className="animate-spin" size={18} />

@@ -48,3 +48,4 @@ next-env.d.ts
 /src/config/brand.config.ts
 # Sentry Config File
 .env.sentry-build-plugin
+.env*.local

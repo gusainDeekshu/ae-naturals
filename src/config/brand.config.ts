@@ -2,6 +2,7 @@
 
 export const BRAND = {
   name: "AE Naturals",
+  useStoreName: "ae-naturals",
   logo: "https://aenaturals.in/image/logo.png", // <-- Add your logo here (emoji or image path)
 
   phone: "+91 8553463261",

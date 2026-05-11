@@ -13,7 +13,8 @@ export function CartDrawer() {
   const { isCartOpen, closeCart } = useUIStore();
   const { items, removeItem, updateQuantity } = useCartStore();
 
-  const cartTotal = items.reduce((total, item) => total + item.price * item.quantity, 0);
+  // 🔥 FIX: Guard against undefined prices returning NaN
+  const cartTotal = items.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
 
   return (
     <>
@@ -65,7 +66,8 @@ export function CartDrawer() {
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-gray-900 line-clamp-2">{item.name}</h3>
-                      <p className="text-[#009688] font-bold mt-1">₹{item.price.toLocaleString("en-IN")}</p>
+                      {/* 🔥 FIX: Safely fallback to 0 before invoking toLocaleString */}
+                      <p className="text-[#009688] font-bold mt-1">₹{(item.price || 0).toLocaleString("en-IN")}</p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border rounded-md">

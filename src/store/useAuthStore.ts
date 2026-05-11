@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import * as Sentry from "@sentry/nextjs";
+import { BRAND } from "@/config/brand.config";
 
 interface User {
   id: string;
@@ -57,7 +58,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "flower-fairy-auth",
+      name: `${BRAND.useStoreName}-auth`, // Unique name for auth storage
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
         user: state.user,

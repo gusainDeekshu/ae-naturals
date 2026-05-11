@@ -1,6 +1,5 @@
 // src\app\cart\page.tsx
 
-
 "use client";
 
 import { useCartStore } from "@/store/useCartStore";
@@ -18,8 +17,8 @@ import Link from "next/link";
 import { load } from "@cashfreepayments/cashfree-js"; // 🔥 Imported Cashfree SDK
 
 interface CourierOption {
-  courierPartnerId?: string; 
-  courier_id?: string;       
+  courierPartnerId?: string;
+  courier_id?: string;
   courierName?: string;
   courier_name?: string;
   rate: number;
@@ -41,7 +40,9 @@ export default function CheckoutPage() {
       if (errorParam === "payment_failed") {
         toast.error("Payment failed or was cancelled. Please try again.");
       } else if (errorParam === "hash_mismatch") {
-        toast.error(`Security validation failed: ${reasonParam || "Contact support"}`);
+        toast.error(
+          `Security validation failed: ${reasonParam || "Contact support"}`,
+        );
       } else {
         toast.error("An error occurred during checkout.");
       }
@@ -57,7 +58,9 @@ export default function CheckoutPage() {
 
   // --- Shipping State ---
   const [courierOptions, setCourierOptions] = useState<CourierOption[]>([]);
-  const [selectedCourierId, setSelectedCourierId] = useState<string | null>(null);
+  const [selectedCourierId, setSelectedCourierId] = useState<string | null>(
+    null,
+  );
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
@@ -83,7 +86,12 @@ export default function CheckoutPage() {
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const cartTotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  // 🔥 FIX: Guard against undefined prices
+  const cartTotal = items.reduce(
+    (acc, item) => acc + (item.price || 0) * item.quantity,
+    0,
+  );
+
   const grandTotal = cartTotal + shippingCost;
   const storeId = items[0]?.storeId || "default-store";
 
@@ -160,15 +168,18 @@ export default function CheckoutPage() {
       console.log("Courier Name Received:", data?.courierName);
       console.log("Show Estimation Flag:", data?.showEstimation);
       console.log("==========================");
-      
+
       setShowEstimation(data?.showEstimation ?? true);
 
       if (data?.options && data.options.length > 0) {
         // Multi-Courier Flow
-        const sortedOptions = [...data.options].sort((a, b) => Number(a.rate) - Number(b.rate));
+        const sortedOptions = [...data.options].sort(
+          (a, b) => Number(a.rate) - Number(b.rate),
+        );
         setCourierOptions(sortedOptions);
-        
-        const recommended = sortedOptions.find((o) => o.isRecommended) || sortedOptions[0];
+
+        const recommended =
+          sortedOptions.find((o) => o.isRecommended) || sortedOptions[0];
         handleCourierSelect(recommended);
       } else {
         // Fallback Flow (Estimation disabled or internal rules applied)
@@ -181,11 +192,13 @@ export default function CheckoutPage() {
       }
     } catch (error: any) {
       console.error(`[${traceId}] Shipping Calculation Failed`, error);
-      
-      const msg = error.response?.data?.message || "Could not fetch shipping rates. Please try again.";
+
+      const msg =
+        error.response?.data?.message ||
+        "Could not fetch shipping rates. Please try again.";
       setShippingError(msg);
       toast.error(msg);
-      
+
       setSelectedCourierId(null);
       setShippingCost(0);
       setTopCourierName("");
@@ -232,7 +245,10 @@ export default function CheckoutPage() {
       setShowAddAddressForm(false);
       toast.success("Address saved!");
     } catch (error: any) {
-      const msg = error?.response?.data?.message?.[0] || error?.response?.data?.message || "Failed to add address";
+      const msg =
+        error?.response?.data?.message?.[0] ||
+        error?.response?.data?.message ||
+        "Failed to add address";
       toast.error(msg);
     }
   };
@@ -277,18 +293,26 @@ export default function CheckoutPage() {
 
       const session = sessionRes.data;
       const payRes = await paymentService.initiatePayment(session.id);
-      
+
       // We extend the type here to satisfy TS for the new paymentSessionId property
-      const responseData: PaymentInitiateResponse & { paymentSessionId?: string } = payRes?.data || payRes;
+      const responseData: PaymentInitiateResponse & {
+        paymentSessionId?: string;
+      } = payRes?.data || payRes;
 
       toast.dismiss(toastId);
 
       // 🔥 CASHFREE SDK INTERCEPTION 🔥
-      if (responseData.provider === "CASHFREE" && responseData.paymentSessionId) {
+      if (
+        responseData.provider === "CASHFREE" &&
+        responseData.paymentSessionId
+      ) {
         try {
           // Initialize SDK. Mode is automatically managed based on environment variable or defaults to sandbox
           const cashfree = await load({
-            mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === "production" ? "production" : "sandbox",
+            mode:
+              process.env.NEXT_PUBLIC_CASHFREE_ENV === "production"
+                ? "production"
+                : "sandbox",
           });
 
           if (cashfree) {
@@ -310,18 +334,21 @@ export default function CheckoutPage() {
       executePaymentFlow(responseData, session.id, router);
     } catch (err: any) {
       toast.dismiss(toastId);
-      const msg = err?.response?.data?.message || err?.message || "Checkout failed";
+      const msg =
+        err?.response?.data?.message || err?.message || "Checkout failed";
       toast.error(msg);
       setIsProcessing(false);
     }
   };
 
   if (items.length === 0) {
-   return (
+    return (
       <div className="flex flex-col items-center justify-center py-20 min-h-[60vh]">
         <ShoppingBag size={80} className="text-gray-200 mb-6" />
         <h2 className="text-2xl font-bold text-gray-800">Your cart is empty</h2>
-        <p className="text-gray-500 mb-8">Add some beautiful products to get started!</p>
+        <p className="text-gray-500 mb-8">
+          Add some beautiful products to get started!
+        </p>
         <Link href="/">
           <Button className="bg-[#217A6E] hover:bg-[#004d3d] px-8 py-6 text-lg rounded-xl">
             Continue Shopping
@@ -377,13 +404,17 @@ export default function CheckoutPage() {
                 className="p-2 border rounded-md w-full"
                 placeholder="First Name"
                 required
-                onChange={(e) => setNewAddress({ ...newAddress, firstName: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, firstName: e.target.value })
+                }
               />
               <input
                 className="p-2 border rounded-md w-full"
                 placeholder="Last Name"
                 required
-                onChange={(e) => setNewAddress({ ...newAddress, lastName: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, lastName: e.target.value })
+                }
               />
             </div>
             <input
@@ -391,7 +422,9 @@ export default function CheckoutPage() {
               placeholder="Email"
               type="email"
               required
-              onChange={(e) => setNewAddress({ ...newAddress, email: e.target.value })}
+              onChange={(e) =>
+                setNewAddress({ ...newAddress, email: e.target.value })
+              }
             />
             <div className="relative">
               <input
@@ -411,7 +444,9 @@ export default function CheckoutPage() {
                 }}
               />
               {newAddress.phone && !/^[6-9]\d{9}$/.test(newAddress.phone) && (
-                <p className="text-[10px] text-red-500 mt-1">Must be 10 digits starting with 6-9</p>
+                <p className="text-[10px] text-red-500 mt-1">
+                  Must be 10 digits starting with 6-9
+                </p>
               )}
             </div>
 
@@ -419,23 +454,29 @@ export default function CheckoutPage() {
               className="p-2 border rounded-md w-full"
               placeholder="Address Line"
               required
-              onChange={(e) => setNewAddress({ ...newAddress, addressLine: e.target.value })}
+              onChange={(e) =>
+                setNewAddress({ ...newAddress, addressLine: e.target.value })
+              }
             />
             <div className="grid grid-cols-2 gap-3">
               <input
                 className="p-2 border rounded-md w-full"
                 placeholder="City"
                 required
-                onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, city: e.target.value })
+                }
               />
               <input
                 className="p-2 border rounded-md w-full"
                 placeholder="State"
                 required
-                onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, state: e.target.value })
+                }
               />
             </div>
-            
+
             <div className="relative">
               <input
                 type="text"
@@ -449,9 +490,12 @@ export default function CheckoutPage() {
                   setNewAddress({ ...newAddress, pincode: val });
                 }}
               />
-              {newAddress.pincode && !/^[1-9][0-9]{5}$/.test(newAddress.pincode) && (
-                <p className="text-[10px] text-red-500 mt-1">Enter valid 6-digit Pincode</p>
-              )}
+              {newAddress.pincode &&
+                !/^[1-9][0-9]{5}$/.test(newAddress.pincode) && (
+                  <p className="text-[10px] text-red-500 mt-1">
+                    Enter valid 6-digit Pincode
+                  </p>
+                )}
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -463,7 +507,10 @@ export default function CheckoutPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="w-full bg-[#217A6E] hover:bg-[#004d36] text-white">
+              <Button
+                type="submit"
+                className="w-full bg-[#217A6E] hover:bg-[#004d36] text-white"
+              >
                 Save Address
               </Button>
             </div>
@@ -477,12 +524,17 @@ export default function CheckoutPage() {
 
         <div className="space-y-3 max-h-40 overflow-y-auto pr-2 mb-6">
           {items.map((item) => (
-            <div key={item.productId} className="flex justify-between text-sm">
+            <div
+              key={`${item.productId}-${item.variantId}`}
+              className="flex justify-between text-sm"
+            >
               <span className="text-gray-700 truncate pr-4">
-                {item.name} <span className="text-gray-400">x{item.quantity}</span>
+                {item.name}{" "}
+                <span className="text-gray-400">x{item.quantity}</span>
               </span>
+              {/* 🔥 FIX: Safely fallback to 0 */}
               <span className="font-medium whitespace-nowrap">
-                ₹{(item.price * item.quantity).toFixed(2)}
+                ₹{((item.price || 0) * item.quantity).toFixed(2)}
               </span>
             </div>
           ))}
@@ -496,7 +548,8 @@ export default function CheckoutPage() {
 
           {isCalculatingShipping ? (
             <div className="flex items-center gap-2 text-sm text-[#217A6E] bg-[#217A6E]/5 p-3 rounded-lg border border-[#217A6E]/10">
-              <Loader2 className="animate-spin w-4 h-4" /> Fetching best rates...
+              <Loader2 className="animate-spin w-4 h-4" /> Fetching best
+              rates...
             </div>
           ) : courierOptions.length > 0 ? (
             <div className="space-y-2">
@@ -534,7 +587,9 @@ export default function CheckoutPage() {
                           )}
                         </p>
                         {showEstimation && option.etd && (
-                          <p className="text-xs text-gray-500">Est. Delivery: {option.etd} days</p>
+                          <p className="text-xs text-gray-500">
+                            Est. Delivery: {option.etd} days
+                          </p>
                         )}
                       </div>
                     </div>
@@ -549,9 +604,7 @@ export default function CheckoutPage() {
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">
                 Selected Delivery Partner
               </p>
-              <label
-                className="flex items-center justify-between p-3 border rounded-lg cursor-default transition-all border-[#217A6E] bg-[#217A6E]/5 ring-1 ring-[#217A6E]"
-              >
+              <label className="flex items-center justify-between p-3 border rounded-lg cursor-default transition-all border-[#217A6E] bg-[#217A6E]/5 ring-1 ring-[#217A6E]">
                 <div className="flex items-center gap-3">
                   <input
                     type="radio"
@@ -595,7 +648,13 @@ export default function CheckoutPage() {
 
           <div className="flex justify-between items-center text-gray-600">
             <span>Shipping</span>
-            <span className={shippingCost === 0 && selectedCourierId ? "text-green-600 font-medium" : ""}>
+            <span
+              className={
+                shippingCost === 0 && selectedCourierId
+                  ? "text-green-600 font-medium"
+                  : ""
+              }
+            >
               {shippingCost === 0
                 ? selectedCourierId
                   ? "FREE"

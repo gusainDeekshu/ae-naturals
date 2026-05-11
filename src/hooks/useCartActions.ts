@@ -1,10 +1,8 @@
-// src\hooks\useCartActions.ts
-
+// src/hooks/useCartActions.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CartService } from '@/services/cart.service';
-import { CheckoutService } from '@/services/checkout.service';
 import { AddToCartPayload, BuyNowPayload } from '@/types/cart';
-import { toast } from 'sonner'; // Or your preferred toast library
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export const useAddToCart = () => {
@@ -13,7 +11,6 @@ export const useAddToCart = () => {
   return useMutation({
     mutationFn: (payload: AddToCartPayload) => CartService.addToCart(payload),
     onSuccess: () => {
-      // Refresh the cart icon/drawer globally
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       toast.success('Added to cart!');
     },
@@ -25,12 +22,18 @@ export const useAddToCart = () => {
 
 export const useBuyNow = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: BuyNowPayload) => CheckoutService.buyNow(payload),
-    onSuccess: (data) => {
-      // Bypass cart and go straight to secure checkout session
-      router.push(`/checkout/${data.checkoutSessionId}`);
+    mutationFn: async (payload: BuyNowPayload) => {
+      // Clear existing cart and add the Buy Now item to guarantee standard checkout flow
+      await CartService.clearCart();
+      return await CartService.addToCart(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      // Redirect to standard checkout to capture Address and Shipping properly
+      router.push(`/checkout`);
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Item out of stock or unavailable');
