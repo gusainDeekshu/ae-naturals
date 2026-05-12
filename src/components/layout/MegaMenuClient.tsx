@@ -5,7 +5,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, ArrowRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function MegaMenuClient({ groups }: { groups: any[] }) {
@@ -13,7 +13,7 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
 
   return (
     <nav
-      className="relative flex items-center gap-8 xl:gap-10 h-16"
+      className="relative flex items-center gap-6 xl:gap-8 h-full"
       aria-label="Main navigation"
       onMouseLeave={() => setActiveGroup(null)}
     >
@@ -24,7 +24,7 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
         return (
           <div
             key={group.id}
-            className="relative h-full flex items-center"
+            className="relative h-full flex items-center group/nav"
             onMouseEnter={() => !isLink && setActiveGroup(group.id)}
           >
             {/* DIRECT LINK */}
@@ -34,15 +34,9 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
                 className="
                   relative
                   inline-flex items-center
-                  text-[13px] font-semibold uppercase tracking-[0.14em]
-                  text-zinc-800
-                  transition-all duration-300
+                  text-[15px] font-medium text-gray-800
+                  transition-colors duration-200
                   hover:text-[#217A6E]
-                  after:absolute after:left-0 after:-bottom-[22px]
-                  after:h-[2px] after:w-0
-                  after:bg-[#217A6E]
-                  after:transition-all after:duration-300
-                  hover:after:w-full
                 "
               >
                 {group.title}
@@ -53,13 +47,13 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
                 aria-expanded={isActive}
                 aria-haspopup="true"
                 className={`
-                  relative inline-flex items-center gap-1.5
-                  text-[13px] font-semibold uppercase tracking-[0.14em]
-                  transition-all duration-300
+                  relative inline-flex items-center gap-1
+                  text-[15px] font-medium
+                  transition-colors duration-200 h-full
                   ${
                     isActive
                       ? "text-[#217A6E]"
-                      : "text-zinc-800 hover:text-[#217A6E]"
+                      : "text-gray-800 hover:text-[#217A6E]"
                   }
                 `}
               >
@@ -67,77 +61,59 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
 
                 <ChevronDown
                   className={`
-                    w-4 h-4 transition-transform duration-300
+                    w-4 h-4 transition-transform duration-200
                     ${isActive ? "rotate-180" : ""}
-                  `}
-                />
-
-                {/* ACTIVE BAR */}
-                <span
-                  className={`
-                    absolute left-0 -bottom-[22px]
-                    h-[2px] bg-[#217A6E]
-                    transition-all duration-300
-                    ${isActive ? "w-full opacity-100" : "w-0 opacity-0"}
                   `}
                 />
               </button>
             )}
 
-            {/* MEGA PANEL */}
+            {/* MEGA PANEL - ROUNDED SQUARE & FITTED CONTENT */}
             <AnimatePresence>
               {isActive && !isLink && (
                 <motion.div
-                  initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
                   className="
-                    absolute left-1/2 top-full z-50
+                    absolute left-1/2 top-[80%] z-50
                     -translate-x-1/2
-                    pt-6
+                    pt-0
                   "
                 >
+                  {/* Invisible bridge to keep hover active */}
+                  <div className="absolute -top-4 left-0 w-full h-4 bg-transparent" />
+
                   <div
                     className="
-    w-[min(1280px,95vw)]
-    overflow-hidden
-    rounded-[28px]
-    border border-zinc-200/70
-
-    bg-gradient-to-br
-    from-white
-    via-[#f8fcfb]
-    to-[#eef7f5]
-
-    backdrop-blur-xl
-    shadow-[0_30px_80px_rgba(0,0,0,0.12)]
-  "
+                      w-[min(1000px,95vw)]
+                      overflow-hidden
+                      rounded-lg /* Soft rounded square corners */
+                      border border-gray-200
+                      bg-white
+                      shadow-xl
+                    "
                   >
-                    <div className="grid grid-cols-12">
-                      {/* MENU COLUMNS */}
-                      {/* MENU COLUMNS */}
-                      <div className="relative col-span-8 px-10 py-10 bg-gradient-to-br from-white via-[#f9fcfb] to-[#f1f8f6]">
-                        {/* SOFT DIVIDER */}
-                        <div className="pointer-events-none absolute right-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-zinc-200/50 to-transparent " />
-
-                        <div className="grid grid-cols-3 gap-10">
+                    <div className="grid grid-cols-12 items-stretch">
+                      
+                      {/* MENU COLUMNS (LEFT SIDE) */}
+                      <div className="col-span-8 px-8 py-8 bg-white">
+                        <div className="grid grid-cols-3 gap-x-6 gap-y-8">
                           {group.columns?.map((column: any) => (
                             <div key={column.id}>
                               <h3
                                 className="
-                                  mb-5
-                                  text-[11px]
-                                  font-bold
-                                  uppercase
-                                  tracking-[0.22em]
-                                  text-[#217A6E]
+                                  mb-4
+                                  text-base
+                                  font-extrabold
+                                  text-gray-900
                                 "
                               >
                                 {column.title || "Explore"}
                               </h3>
 
-                              <ul className="space-y-1.5">
+                              <ul className="space-y-3">
                                 {column.items?.map((item: any) => (
                                   <li key={item.id}>
                                     <Link
@@ -149,50 +125,13 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
                                             : `/${item.slug}`
                                       }
                                       className="
-                                        group
-                                        flex items-center justify-between
-                                        rounded-xl
-                                        px-3 py-2.5
-
-                                        text-sm font-medium text-zinc-700
-
-                                        transition-all duration-250
-
-                                        hover:bg-white
-                                        hover:text-[#217A6E]
-                                        hover:shadow-sm
+                                        block
+                                        text-sm text-gray-600
+                                        transition-colors duration-200
+                                        hover:text-[#217A6E] hover:font-medium
                                       "
                                     >
-                                      <div className="flex items-center">
-                                        <span
-                                          className="
-                                            mr-0
-                                            h-[2px] w-0
-                                            rounded-full
-                                            bg-[#217A6E]
-
-                                            transition-all duration-250
-
-                                            group-hover:mr-3
-                                            group-hover:w-4
-                                          "
-                                        />
-
-                                        <span>{item.label}</span>
-                                      </div>
-
-                                      <ArrowRight
-                                        className="
-                                          h-4 w-4
-                                          opacity-0
-                                          -translate-x-1
-
-                                          transition-all duration-250
-
-                                          group-hover:translate-x-0
-                                          group-hover:opacity-100
-                                        "
-                                      />
+                                      {item.label}
                                     </Link>
                                   </li>
                                 ))}
@@ -202,55 +141,24 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
                         </div>
                       </div>
 
-                      {/* PROMO BLOCK */}
+                      {/* PROMO BLOCK (RIGHT SIDE) */}
                       {group.image && (
-                        <div className="col-span-4 bg-zinc-50/70 p-6">
-                          <div
-                            className="
-                              group
-                              relative
-                              h-full min-h-[320px]
-                              overflow-hidden
-                              rounded-[24px]
-                            "
-                          >
+                        <div className="col-span-4 bg-gray-50/50 p-6 flex flex-col items-stretch border-l border-gray-100">
+                          <Link href="#" className="block relative w-full h-full min-h-[250px] rounded-md overflow-hidden group/promo">
                             <Image
                               src={group.image}
                               alt={group.title}
                               fill
                               className="
-                                object-cover
-                                transition-transform duration-700
-                                group-hover:scale-105
+                                object-cover /* Fills the square perfectly without whitespace */
+                                transition-transform duration-500
+                                group-hover/promo:scale-105
                               "
                             />
-
-                            {/* CONTENT */}
-                            <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                              <p className="text-xs uppercase tracking-[0.22em] text-white/70">
-                                Featured
-                              </p>
-
-                              <h3 className="mt-2 text-2xl font-semibold leading-tight">
-                                {group.title}
-                              </h3>
-
-                              <div
-                                className="
-                                  mt-4 inline-flex items-center gap-2
-                                  text-sm font-medium
-                                  text-white/90
-                                  transition-all duration-300
-                                  group-hover:gap-3
-                                "
-                              >
-                                Explore Collection
-                                <ArrowRight className="h-4 w-4" />
-                              </div>
-                            </div>
-                          </div>
+                          </Link>
                         </div>
                       )}
+                      
                     </div>
                   </div>
                 </motion.div>
