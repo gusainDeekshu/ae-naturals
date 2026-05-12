@@ -1,11 +1,11 @@
-// src\components\layout\MegaMenuClient.tsx
+// src/components/layout/MegaMenuClient.tsx
 
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function MegaMenuClient({ groups }: { groups: any[] }) {
@@ -33,10 +33,16 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
                 href={group.navLink || "#"}
                 className="
                   relative
-                  text-sm font-semibold uppercase tracking-wide
+                  inline-flex items-center
+                  text-[13px] font-semibold uppercase tracking-[0.14em]
                   text-zinc-800
-                  transition-colors duration-200
+                  transition-all duration-300
                   hover:text-[#217A6E]
+                  after:absolute after:left-0 after:-bottom-[22px]
+                  after:h-[2px] after:w-0
+                  after:bg-[#217A6E]
+                  after:transition-all after:duration-300
+                  hover:after:w-full
                 "
               >
                 {group.title}
@@ -46,20 +52,34 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
                 type="button"
                 aria-expanded={isActive}
                 aria-haspopup="true"
-                className="
-                  inline-flex items-center gap-1
-                  text-sm font-semibold uppercase tracking-wide
-                  text-zinc-800
-                  transition-colors duration-200
-                  hover:text-[#217A6E]
-                "
+                className={`
+                  relative inline-flex items-center gap-1.5
+                  text-[13px] font-semibold uppercase tracking-[0.14em]
+                  transition-all duration-300
+                  ${
+                    isActive
+                      ? "text-[#217A6E]"
+                      : "text-zinc-800 hover:text-[#217A6E]"
+                  }
+                `}
               >
                 <span>{group.title}</span>
 
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isActive ? "rotate-180" : ""
-                  }`}
+                  className={`
+                    w-4 h-4 transition-transform duration-300
+                    ${isActive ? "rotate-180" : ""}
+                  `}
+                />
+
+                {/* ACTIVE BAR */}
+                <span
+                  className={`
+                    absolute left-0 -bottom-[22px]
+                    h-[2px] bg-[#217A6E]
+                    transition-all duration-300
+                    ${isActive ? "w-full opacity-100" : "w-0 opacity-0"}
+                  `}
                 />
               </button>
             )}
@@ -68,110 +88,170 @@ export default function MegaMenuClient({ groups }: { groups: any[] }) {
             <AnimatePresence>
               {isActive && !isLink && (
                 <motion.div
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.22 }}
+                  initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
                   className="
                     absolute left-1/2 top-full z-50
                     -translate-x-1/2
-                    mt-4
-                    w-[min(1200px,95vw)]
-                    rounded-2xl
-                    border border-zinc-100
-                    bg-white
-                    shadow-[0_20px_60px_rgba(0,0,0,0.08)]
-                    overflow-hidden
+                    pt-6
                   "
                 >
-                  <div className="grid grid-cols-12">
+                  <div
+                    className="
+    w-[min(1280px,95vw)]
+    overflow-hidden
+    rounded-[28px]
+    border border-zinc-200/70
 
-                    {/* MENU COLUMNS */}
-                    <div className="col-span-8 px-8 py-8">
-                      <div className="grid grid-cols-3 gap-8">
-                        {group.columns?.map((column: any) => (
-                          <div key={column.id}>
-                            <h3
-                              className="
-                                text-[11px]
-                                font-semibold
-                                uppercase
-                                tracking-[0.18em]
-                                text-zinc-400
-                                mb-5
-                              "
-                            >
-                              {column.title || "Explore"}
-                            </h3>
+    bg-gradient-to-br
+    from-white
+    via-[#f8fcfb]
+    to-[#eef7f5]
 
-                            <ul className="space-y-3">
-                              {column.items?.map((item: any) => (
-                                <li key={item.id}>
-                                  <Link
-                                    href={
-                                      item.type === "COLLECTION"
-                                        ? `/collections/${item.slug}`
-                                        : item.type === "PRODUCT"
-                                        ? `/product/${item.slug}`
-                                        : `/${item.slug}`
-                                    }
-                                    className="
-                                      group flex items-center
-                                      text-sm font-medium text-zinc-700
-                                      transition-colors duration-200
-                                      hover:text-[#217A6E]
-                                    "
-                                  >
-                                    <span
+    backdrop-blur-xl
+    shadow-[0_30px_80px_rgba(0,0,0,0.12)]
+  "
+                  >
+                    <div className="grid grid-cols-12">
+                      {/* MENU COLUMNS */}
+                      {/* MENU COLUMNS */}
+                      <div className="relative col-span-8 px-10 py-10 bg-gradient-to-br from-white via-[#f9fcfb] to-[#f1f8f6]">
+                        {/* SOFT DIVIDER */}
+                        <div className="pointer-events-none absolute right-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-zinc-200/50 to-transparent " />
+
+                        <div className="grid grid-cols-3 gap-10">
+                          {group.columns?.map((column: any) => (
+                            <div key={column.id}>
+                              <h3
+                                className="
+                                  mb-5
+                                  text-[11px]
+                                  font-bold
+                                  uppercase
+                                  tracking-[0.22em]
+                                  text-[#217A6E]
+                                "
+                              >
+                                {column.title || "Explore"}
+                              </h3>
+
+                              <ul className="space-y-1.5">
+                                {column.items?.map((item: any) => (
+                                  <li key={item.id}>
+                                    <Link
+                                      href={
+                                        item.type === "COLLECTION"
+                                          ? `/collections/${item.slug}`
+                                          : item.type === "PRODUCT"
+                                            ? `/product/${item.slug}`
+                                            : `/${item.slug}`
+                                      }
                                       className="
-                                        mr-0 h-[2px] w-0 bg-[#217A6E]
-                                        transition-all duration-200
-                                        group-hover:w-3 group-hover:mr-2
+                                        group
+                                        flex items-center justify-between
+                                        rounded-xl
+                                        px-3 py-2.5
+
+                                        text-sm font-medium text-zinc-700
+
+                                        transition-all duration-250
+
+                                        hover:bg-white
+                                        hover:text-[#217A6E]
+                                        hover:shadow-sm
                                       "
-                                    />
-                                    {item.label}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                                    >
+                                      <div className="flex items-center">
+                                        <span
+                                          className="
+                                            mr-0
+                                            h-[2px] w-0
+                                            rounded-full
+                                            bg-[#217A6E]
 
-                    {/* PROMO BLOCK */}
-                    {group.image && (
-                      <div className="col-span-4 bg-zinc-50 p-6">
-                        <div
-                          className="
-                            relative
-                            h-full min-h-[280px]
-                            overflow-hidden
-                            rounded-2xl
-                          "
-                        >
-                          <Image
-                            src={group.image}
-                            alt={group.title}
-                            fill
-                            className="
-                              object-cover
-                              transition-transform duration-700
-                              hover:scale-105
-                            "
-                          />
+                                            transition-all duration-250
 
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                                            group-hover:mr-3
+                                            group-hover:w-4
+                                          "
+                                        />
 
-                          <div className="absolute bottom-5 left-5 text-white">
-                            <p className="text-lg font-semibold">
-                              {group.title}
-                            </p>
-                          </div>
+                                        <span>{item.label}</span>
+                                      </div>
+
+                                      <ArrowRight
+                                        className="
+                                          h-4 w-4
+                                          opacity-0
+                                          -translate-x-1
+
+                                          transition-all duration-250
+
+                                          group-hover:translate-x-0
+                                          group-hover:opacity-100
+                                        "
+                                      />
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    )}
 
+                      {/* PROMO BLOCK */}
+                      {group.image && (
+                        <div className="col-span-4 bg-zinc-50/70 p-6">
+                          <div
+                            className="
+                              group
+                              relative
+                              h-full min-h-[320px]
+                              overflow-hidden
+                              rounded-[24px]
+                            "
+                          >
+                            <Image
+                              src={group.image}
+                              alt={group.title}
+                              fill
+                              className="
+                                object-cover
+                                transition-transform duration-700
+                                group-hover:scale-105
+                              "
+                            />
+
+                            {/* CONTENT */}
+                            <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                              <p className="text-xs uppercase tracking-[0.22em] text-white/70">
+                                Featured
+                              </p>
+
+                              <h3 className="mt-2 text-2xl font-semibold leading-tight">
+                                {group.title}
+                              </h3>
+
+                              <div
+                                className="
+                                  mt-4 inline-flex items-center gap-2
+                                  text-sm font-medium
+                                  text-white/90
+                                  transition-all duration-300
+                                  group-hover:gap-3
+                                "
+                              >
+                                Explore Collection
+                                <ArrowRight className="h-4 w-4" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               )}

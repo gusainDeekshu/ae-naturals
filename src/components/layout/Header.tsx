@@ -1,4 +1,4 @@
-// src\components\layout\Header.tsx
+// src/components/layout/Header.tsx
 
 "use client";
 
@@ -26,11 +26,12 @@ interface HeaderProps {
 export function Header({ megaMenu }: HeaderProps) {
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false); // 🔥 Added scroll state
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Auth & UI State
   const { user, logout } = useAuthStore();
- const { openSearch, openCart } = useUIStore();
+  const { openSearch, openCart } = useUIStore();
   
   // Cart State
   const items = useCartStore((s) => s.items);
@@ -48,6 +49,16 @@ export function Header({ megaMenu }: HeaderProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 🔥 Listen for scroll events to toggle header shadow & border
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleLogout = async () => {
     try {
       await apiClient.post('/auth/logout');
@@ -62,7 +73,14 @@ export function Header({ megaMenu }: HeaderProps) {
 
   return (
     <>
-      <header className="w-full bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+      {/* 🔥 Conditionally apply background, border, and shadow based on isScrolled */}
+      <header 
+        className={`w-full sticky top-0 z-50 transition-all duration-300 ${
+          isScrolled 
+            ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200" 
+            : "bg-white shadow-none border-b border-transparent"
+        }`}
+      >
         
         {/* 1. Ultra-Thin Top Utility Bar */}
         <div className="bg-[#217A6E] text-white py-1.5 px-4 md:px-8 flex justify-between items-center text-[11px] font-medium tracking-wide">
@@ -86,7 +104,6 @@ export function Header({ megaMenu }: HeaderProps) {
         {/* 2. Main Navigation Bar */}
         <div className="px-4 md:px-8 h-[76px] flex items-center justify-between max-w-[1600px] mx-auto">
           
-          {/* LEFT: Logo */}
           {/* LEFT: Logo Section (Premium & Prominent) */}
           <div className="shrink-0 flex items-center lg:flex-[1_1_20%]">
             <Link 
@@ -95,7 +112,6 @@ export function Header({ megaMenu }: HeaderProps) {
               aria-label={`${BRAND.name} Home`}
             >
               {BRAND.logo?.startsWith("http") || BRAND.logo?.startsWith("/") ? (
-                // 🌟 PRO IMAGE LOGO: Beautifully scaled with subtle hover physics
                 <div className="relative h-12 sm:h-14 md:h-[60px] flex items-center transition-transform duration-400 ease-out group-hover:scale-[1.04] group-active:scale-95 origin-left">
                   <img 
                     src={BRAND.logo} 
@@ -105,7 +121,6 @@ export function Header({ megaMenu }: HeaderProps) {
                   />
                 </div>
               ) : (
-                // 🌟 FALLBACK LOGO: Only shows if you switch back to an emoji/text in the config
                 <>
                   <div 
                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl shadow-md shadow-[#217A6E]/20 transition-transform duration-400 ease-out group-hover:scale-[1.06] group-active:scale-95 shrink-0"
@@ -159,9 +174,6 @@ export function Header({ megaMenu }: HeaderProps) {
                   </div>
                   
                   <div className="px-2 py-1">
-                    {/* <Link href="/orders" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl hover:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors">
-                      <Package size={16} /> My Orders
-                    </Link> */}
                     <Link href="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl hover:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors">
                       <Settings size={16} /> Profile Settings
                     </Link>
@@ -180,20 +192,20 @@ export function Header({ megaMenu }: HeaderProps) {
 
             {/* Action 3: Cart Icon */}
             <button 
-  onClick={(e) => {
-    e.preventDefault(); // Prevent any default Link/anchor behavior just in case
-    openCart();
-  }}
-  className="text-gray-900 hover:text-[#217A6E] transition-colors p-1 relative group bg-transparent border-none cursor-pointer"
-  aria-label="Open Cart"
->
-  <ShoppingCart size={22} strokeWidth={2} className="group-hover:scale-110 transition-transform" />
-  {!isLoading && cartCount > 0 && (
-    <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-sm ring-2 ring-white">
-      {cartCount}
-    </span>
-  )}
-</button>
+              onClick={(e) => {
+                e.preventDefault(); 
+                openCart();
+              }}
+              className="text-gray-900 hover:text-[#217A6E] transition-colors p-1 relative group bg-transparent border-none cursor-pointer"
+              aria-label="Open Cart"
+            >
+              <ShoppingCart size={22} strokeWidth={2} className="group-hover:scale-110 transition-transform" />
+              {!isLoading && cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-sm ring-2 ring-white">
+                  {cartCount}
+                </span>
+              )}
+            </button>
             
           </div>
         </div>
@@ -213,16 +225,16 @@ export function Header({ megaMenu }: HeaderProps) {
           <span className="text-[10px] mt-1 font-bold">Home</span>
         </Link>
         <a
-  href={`tel:${BRAND.phone.replace(/\s+/g, "")}`}
-  className="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-900 group"
->
-  <Phone
-    size={22}
-    strokeWidth={2}
-    className="group-active:scale-95 transition-transform"
-  />
-  <span className="text-[10px] mt-1 font-medium">Call</span>
-</a>
+          href={`tel:${BRAND.phone.replace(/\s+/g, "")}`}
+          className="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-900 group"
+        >
+          <Phone
+            size={22}
+            strokeWidth={2}
+            className="group-active:scale-95 transition-transform"
+          />
+          <span className="text-[10px] mt-1 font-medium">Call</span>
+        </a>
         <button onClick={openSearch} className="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-900 group">
           <Search size={22} strokeWidth={2} className="group-active:scale-95 transition-transform" />
           <span className="text-[10px] mt-1 font-medium">Search</span>
