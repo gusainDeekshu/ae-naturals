@@ -48,10 +48,11 @@ export async function Footer() {
         <div className="md:col-span-5 flex flex-col items-start space-y-6">
           {/* Logo */}
           <div className="relative w-[220px] h-[90px]">
-            <Image
+             <Image
               src={BRAND.logo}
               alt={BRAND.name}
               fill
+              sizes="(max-width: 768px) 220px, 220px" // 💡 ADDED: Tells Next.js the exact rendering target width
               className="object-contain object-left"
               priority
             />

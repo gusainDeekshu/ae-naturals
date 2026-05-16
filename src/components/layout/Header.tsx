@@ -1,5 +1,3 @@
-// src/components/layout/Header.tsx
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -10,16 +8,13 @@ import {
   Phone,
   Mail,
   Home,
-  LayoutGrid,
-  Gift,
-  MessageSquare,
-  LogOut,
-  Package,
-  Settings,
   ChevronDown,
   Menu,
+  Settings,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { BRAND } from "@/config/brand.config";
 
 // --- HOOKS & STORES ---
@@ -38,18 +33,21 @@ interface HeaderProps {
 export function Header({ megaMenu }: HeaderProps) {
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false); // 🔥 Added scroll state
+  const [isScrolled, setIsScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Auth & UI State
   const { user, logout } = useAuthStore();
-  // Inside the Header component, extract 'openMobileMenu' from the store:
   const { openSearch, openCart, openMobileMenu } = useUIStore();
 
   // Cart State
   const items = useCartStore((s) => s.items);
   const isLoading = useCartStore((s) => s.isLoading);
   const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
+
+  // Safely manage string fallback images to keep Next.js runtime quiet
+  const cleanLogoUrl = typeof BRAND?.logo === "string" ? BRAND.logo : "";
+  const displayStringLogo = cleanLogoUrl.startsWith("http") || cleanLogoUrl.startsWith("/");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -65,7 +63,7 @@ export function Header({ megaMenu }: HeaderProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 🔥 Listen for scroll events to toggle header shadow & border
+  // Listen for scroll events to toggle header shadow & border
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -89,7 +87,7 @@ export function Header({ megaMenu }: HeaderProps) {
 
   return (
     <>
-      {/* 🔥 Conditionally apply background, border, and shadow based on isScrolled */}
+      {/* Conditionally apply background, border, and shadow based on isScrolled */}
       <header
         className={`w-full sticky top-0 z-50 transition-all duration-300 ${
           isScrolled
@@ -128,28 +126,34 @@ export function Header({ megaMenu }: HeaderProps) {
 
         {/* 2. Main Navigation Bar */}
         <div className="px-4 md:px-8 h-[76px] flex items-center justify-between max-w-[1600px] mx-auto">
-          {/* LEFT: Logo Section (Premium & Prominent) */}
+          {/* LEFT: Logo Section */}
           <div className="shrink-0 flex items-center lg:flex-[1_1_20%]">
-            {/* 🔥 ADD THIS: Mobile Hamburger Menu Button */}
-            <button 
+            <button
               onClick={openMobileMenu}
               className="lg:hidden p-2 -ml-2 mr-2 text-gray-900 hover:text-[#217A6E] transition-colors"
               aria-label="Open Mobile Menu"
             >
               <Menu size={26} strokeWidth={2.5} />
             </button>
+            
             <Link
               href="/"
               className="flex items-center gap-3 group outline-none rounded-xl focus-visible:ring-2 focus-visible:ring-[#217A6E]/40 p-1 -ml-1 transition-all"
               aria-label={`${BRAND.name} Home`}
             >
-              {BRAND.logo?.startsWith("http") || BRAND.logo?.startsWith("/") ? (
-                <div className="relative h-12 sm:h-14 md:h-[60px] flex items-center transition-transform duration-400 ease-out group-hover:scale-[1.04] group-active:scale-95 origin-left">
-                  <img
-                    src={BRAND.logo}
-                    alt={BRAND.name}
-                    className="h-full w-auto object-contain drop-shadow-sm"
-                    loading="eager"
+              {displayStringLogo ? (
+                /* FIX: Replaced raw image with an explicit layout boundary.
+                  This handles 'fill' properties smoothly across devices and satisfies
+                  Next.js' 'sizes' attribute requirements cleanly.
+                */
+                <div className="relative w-[120px] h-[42px] sm:w-[140px] sm:h-[48px] md:w-[150px] md:h-[52px] transition-transform duration-400 ease-out group-hover:scale-[1.04] group-active:scale-95 origin-left">
+                  <Image
+                    src={cleanLogoUrl}
+                    alt={BRAND.name || "AE Naturals Logo"}
+                    fill
+                    sizes="(max-width: 640px) 120px, (max-width: 768px) 140px, 150px"
+                    style={{ objectFit: "contain" }}
+                    priority
                   />
                 </div>
               ) : (
@@ -169,7 +173,6 @@ export function Header({ megaMenu }: HeaderProps) {
           </div>
 
           {/* CENTER: Mega Menu */}
-          {/* 🔥 FIX: Changed classes to prevent taking up empty layout space on mobile */}
           <div className="flex-1 lg:flex-[1_1_60%] flex justify-center items-center h-full w-0 lg:w-auto">
             {megaMenu}
           </div>
@@ -208,7 +211,9 @@ export function Header({ megaMenu }: HeaderProps) {
                 {user && (
                   <ChevronDown
                     size={14}
-                    className={`hidden sm:block transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
+                    className={`hidden sm:block transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
                   />
                 )}
               </button>
@@ -228,8 +233,7 @@ export function Header({ megaMenu }: HeaderProps) {
                     <Link
                       href="/profile"
                       onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl h
-                    over:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors"
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 rounded-xl hover:bg-[#217A6E]/5 hover:text-[#217A6E] transition-colors"
                     >
                       <Settings size={16} /> Profile Settings
                     </Link>

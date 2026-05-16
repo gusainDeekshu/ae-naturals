@@ -3,7 +3,7 @@
 export const BRAND = {
   name: "AE Naturals",
   useStoreName: "ae-naturals",
-  logo: "https://aenaturals.in/image/logo.png", // <-- Add your logo here (emoji or image path)
+  logo: "https://res.cloudinary.com/djunjtr5l/image/upload/f_auto,q_auto/v1778848925/logo_rogjqa.png", // <-- Add your logo here (emoji or image path)
 
   phone: "+91 8553463261",
   whatsapp: "+91 8553463261",
