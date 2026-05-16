@@ -1,8 +1,6 @@
-// src\components\product\ProductGallery.tsx
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function ProductGallery({
@@ -12,11 +10,19 @@ export default function ProductGallery({
   images: string[];
   name: string;
 }) {
+  // Safe initialization fallback string guard
   const [activeImg, setActiveImg] = useState(images?.[0] || "/placeholder.png");
   
   // Zoom States
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [showZoom, setShowZoom] = useState(false);
+
+  // Synchronize state if product images arrive late from an async API call
+  useEffect(() => {
+    if (images?.length > 0 && (!activeImg || activeImg === "/placeholder.png")) {
+      setActiveImg(images[0]);
+    }
+  }, [images, activeImg]);
 
   /**
    * Calculates the mouse position as a percentage of the container dimensions.
@@ -35,7 +41,7 @@ export default function ProductGallery({
         
         {/* Thumbnails */}
         <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:max-h-[500px] no-scrollbar shrink-0">
-          {images.map((img, idx) => (
+          {images?.map((img, idx) => (
             <button
               key={idx}
               onMouseEnter={() => setActiveImg(img)}
@@ -50,6 +56,7 @@ export default function ProductGallery({
                 src={img}
                 alt={`${name} thumbnail ${idx + 1}`}
                 fill
+                sizes="64px" // 💡 FIX: Thumbnails are hardcoded to 16rem (64px)
                 className="object-cover"
               />
             </button>
@@ -68,7 +75,8 @@ export default function ProductGallery({
             src={activeImg}
             alt={name}
             fill
-            priority
+            priority // 💡 FIX: Tells Next.js to inject preload links to eliminate LCP delay warnings
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px" // 💡 FIX: Responsive size handling rules
             className="object-contain p-4"
           />
 

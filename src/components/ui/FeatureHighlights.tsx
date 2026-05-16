@@ -47,7 +47,6 @@ export default function FeatureHighlights({
     queryFn: async () => {
       const res = await apiClient.get(`/products/${productId}/highlights`);
       // Safely extract the array regardless of how Axios/apiClient wraps it
-        console.log("Rendering feature:", res) 
 
       return Array.isArray(res) ? res : res?.data || [];
     },
