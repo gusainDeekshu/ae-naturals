@@ -42,22 +42,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [_hasHydrated, setAuth, logout]);
 
-  if (!_hasHydrated || loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="space-y-3">
-              <div className="h-40 bg-gray-200 rounded-lg animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return <>{children}</>;
 }
