@@ -5,6 +5,7 @@ export interface CartItem {
   name?: string;
   price?: number;
   image?: string;
+   isCodEnabled?: boolean;
 }
 
 export interface CartResponse {

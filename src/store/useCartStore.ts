@@ -13,6 +13,7 @@ export interface CartItem {
   image: string;
   quantity: number;
   storeId?: string;
+   isCodEnabled?: boolean;
 }
 
 interface CartState {
@@ -82,6 +83,7 @@ export const useCartStore = create<CartState>()(
               image: item.product.images?.[0] || "",
               quantity: item.quantity,
               storeId: item.tenantId, 
+              isCodEnabled: item.product.isCodEnabled, 
             }));
             set({ items: normalized });
           } else if (res && Array.isArray(res.items) && res.items.length === 0) {

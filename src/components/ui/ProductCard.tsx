@@ -18,6 +18,7 @@ interface ProductCardProps {
     reviewCount?: number;
     category?: { name: string } | string;
     variants: any[]; // Strictly required in the new architecture
+    isCodEnabled:boolean;
   };
 }
 
@@ -134,6 +135,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               price: currentPrice, // Injected resolved variant price
               images: product.images,
               variants: variants,
+              isCodEnabled:product.isCodEnabled,
             }}
             variantId={selectedVariant?.id}
             stock={selectedVariant?.stock || 0} // Injected resolved variant stock

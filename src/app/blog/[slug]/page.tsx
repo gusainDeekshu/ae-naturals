@@ -1,21 +1,22 @@
 // src/app/blog/[slug]/page.tsx
 
-import { BlogService } from '@/services/blog.service';
-import Image from 'next/image';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { Calendar, ChevronRight, Share2 } from 'lucide-react';
+import { BlogService } from "@/services/blog.service";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Calendar, ChevronRight, Share2 } from "lucide-react";
+
+// 1. Explicitly isolate standalone types to keep the Next.js compiler happy
+type Props = {
+  params: Promise<{ slug: string }>;
+};
 
 // ---------------- SEO ----------------
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export async function generateMetadata({ params }: Props) {
   const resolvedParams = await params;
   const blog = await BlogService.getBlogBySlug(resolvedParams.slug);
 
-  if (!blog) return { title: 'Article Not Found' };
+  if (!blog) return { title: "Article Not Found" };
 
   return {
     title: `${blog.title} | AE Naturals Journal`,
@@ -35,15 +36,14 @@ export default async function BlogDetailPage({
 
   if (!blog) return notFound();
 
-  const date = new Date(blog.createdAt).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+  const date = new Date(blog.createdAt).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 
   return (
     <main className="min-h-screen bg-background pb-20">
-
       {/* ---------------- BREADCRUMB ---------------- */}
       <div className="bg-muted border-b border-border">
         <div className="max-w-4xl mx-auto px-6 sm:px-8 py-4 flex items-center text-sm text-muted-foreground gap-2">
@@ -66,10 +66,9 @@ export default async function BlogDetailPage({
 
       {/* ---------------- HEADER ---------------- */}
       <header className="max-w-4xl mx-auto px-6 sm:px-8 pt-12 pb-8 text-center">
-        
         {/* Category Badge */}
         <div className="inline-block bg-accent text-accent-foreground font-semibold px-4 py-1.5 rounded-full text-xs uppercase tracking-wider mb-6">
-          {blog.category?.name || 'Journal'}
+          {blog.category?.name || "Journal"}
         </div>
 
         {/* Title */}
@@ -142,9 +141,7 @@ export default async function BlogDetailPage({
         {/* ---------------- TAGS ---------------- */}
         {blog.tags && blog.tags.length > 0 && (
           <div className="mt-12 pt-8 border-t border-border flex flex-wrap gap-2 items-center">
-            <span className="text-foreground font-semibold mr-2">
-              Tags:
-            </span>
+            <span className="text-foreground font-semibold mr-2">Tags:</span>
 
             {blog.tags.map((tag: string, i: number) => (
               <span
@@ -157,7 +154,6 @@ export default async function BlogDetailPage({
           </div>
         )}
       </article>
-
     </main>
   );
 }

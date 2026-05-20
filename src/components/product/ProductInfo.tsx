@@ -52,6 +52,7 @@ export default function ProductInfo({ product }: { product: any }) {
         price: activePrice, // 🔥 FIX: Passed resolved activePrice instead of undefined product.price
         image: product.images?.[0] || "",
         quantity: quantity,
+         isCodEnabled: product.isCodEnabled,
       });
     } finally {
       setIsAdding(false);

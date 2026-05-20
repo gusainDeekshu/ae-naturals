@@ -16,6 +16,7 @@ interface AddToCartButtonProps {
     images: string[];
     variants?: any[];
     stock?: number;
+     isCodEnabled: boolean,
   };
   variantId?: string;
   stock?: number; 
@@ -61,6 +62,7 @@ export const AddToCartButton: React.FC<AddToCartButtonProps> = ({
       price: product.price,
       image: product.images?.[0] || "",
       quantity: 1,
+       isCodEnabled: product.isCodEnabled,
     });
     setIsProcessing(false);
   };

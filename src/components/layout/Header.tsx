@@ -225,7 +225,7 @@ export function Header({ megaMenu }: HeaderProps) {
                       Signed In As
                     </p>
                     <p className="text-sm font-bold text-gray-900 truncate">
-                      {user.email}
+                      {user.name || user.email || BRAND.useStoreName}
                     </p>
                   </div>
 

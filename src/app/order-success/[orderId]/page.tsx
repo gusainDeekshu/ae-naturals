@@ -105,7 +105,7 @@ export default function OrderSuccessPage({
         <div className="bg-white max-w-[500px] w-full rounded-2xl shadow-sm p-10 flex flex-col items-center text-center">
           <Loader2 className="w-12 h-12 text-gray-400 animate-spin mb-4" />
           <h1 className="text-xl font-semibold text-gray-900">
-            Confirming your payment...
+            Confirming your order...
           </h1>
           <p className="text-gray-500 mt-2 text-sm">
             Please do not close or refresh this page.

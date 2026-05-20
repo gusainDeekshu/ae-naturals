@@ -262,7 +262,7 @@ export function OtpModal({
 
     onSuccess: async (resOrData: any) => {
       const data = resOrData?.data || resOrData;
-
+console.log("Phone OTP verification successful:", data);
       if (data?.access_token) {
         await handleLoginSuccess(data);
       }
