@@ -1,4 +1,3 @@
-// src/app/account/orders/[id]/page.tsx
 "use client";
 
 import { use, useEffect } from "react";
@@ -14,11 +13,10 @@ import {
   Truck,
 } from "lucide-react";
 
-// 🔥 FOOLPROOF FETCHER
 const fetcher = async (url: string) => {
   try {
     const res = await apiClient.get(url);
-    // Unwraps custom nesting layers cleanly if your interceptor changes configurations
+    console.log(`[DEBUG] SWR Fetch Success for ${url}:`, res);
     return res?.data?.data || res?.data || res;
   } catch (error) {
     console.error(`SWR Fetch Error for ${url}:`, error);
@@ -26,7 +24,6 @@ const fetcher = async (url: string) => {
   }
 };
 
-// Friendly status colors and descriptions for customers
 const STATUS_BADGES: Record<string, { label: string; container: string; text: string }> = {
   PENDING: { label: "Awaiting Payment", container: "bg-amber-50 border-amber-200", text: "text-amber-700" },
   PAID: { label: "Payment Confirmed", container: "bg-emerald-50 border-emerald-200", text: "text-emerald-700" },
@@ -45,20 +42,14 @@ export default function UserOrderDetailsPage({
   const resolvedParams = use(params);
   const orderId = resolvedParams?.id;
 
-  const {
-    data: order,
-    error,
-    isLoading,
-  } = useSWR(orderId ? `/orders/${orderId}` : null, fetcher);
+  const { data: order, error, isLoading } = useSWR(orderId ? `/orders/${orderId}/summary` : null, fetcher);
 
-  // --- DEBUGGING LOGS ---
   useEffect(() => {
     if (order) {
       console.log("[DEBUG] User Order Data Fetched:", order);
     }
   }, [order]);
 
-  // --- ERROR / LOADING STATES ---
   if (error) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
@@ -88,7 +79,6 @@ export default function UserOrderDetailsPage({
     );
   }
 
-  // --- SAFE FALLBACKS ---
   const currentStatus = order?.status ? String(order.status).toUpperCase() : "PENDING";
   const badgeConfig = STATUS_BADGES[currentStatus] || {
     label: currentStatus,
@@ -100,6 +90,11 @@ export default function UserOrderDetailsPage({
   const formattedDate = order.createdAt 
     ? new Date(order.createdAt).toLocaleDateString("en-IN", { dateStyle: "long" })
     : null;
+
+  // Safe numerical calculations for breakdown card
+  const totalAmount = Number(order.totalAmount) || 0;
+  const shippingCost = Number(order.shippingCost) || 0;
+  const subtotal = Math.max(0, totalAmount - shippingCost);
 
   return (
     <div className="max-w-[1100px] mx-auto py-8 px-4 space-y-6">
@@ -126,12 +121,11 @@ export default function UserOrderDetailsPage({
         </span>
       </div>
 
-      {/* CORE CONTENT LAYOUT */}
+      {/* CORE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* LEFT COLUMN: FULFILLMENT & LOGISTICS */}
+        {/* LEFT COLUMN */}
         <div className="space-y-6">
-          {/* Shipping Address Snapshot */}
           {hasAddress ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
               <h3 className="text-sm font-bold text-gray-900 mb-3.5 flex items-center gap-2">
@@ -155,7 +149,6 @@ export default function UserOrderDetailsPage({
             </div>
           )}
 
-          {/* Payment Method Metadata */}
           {order.paymentProvider && (
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
               <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -173,10 +166,8 @@ export default function UserOrderDetailsPage({
           )}
         </div>
 
-        {/* RIGHT COLUMN: LINE ITEMS & BREAKDOWNS */}
+        {/* RIGHT COLUMN */}
         <div className="lg:col-span-2 space-y-6">
-          
-          {/* Itemized List Container */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
             <div className="p-4 border-b border-gray-100 bg-gray-50/70">
               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -188,7 +179,7 @@ export default function UserOrderDetailsPage({
               {order.items && Array.isArray(order.items) ? (
                 order.items.map((item: any) => (
                   <div
-                    key={item.id || `${item.product?.id}-${item.quantity}`} // Fallback key if item ID is missing   
+                    key={item.id || `${item.product?.id}-${item.quantity}`} 
                     className="p-4 flex items-center gap-4 hover:bg-gray-50/50 transition-colors"
                   >
                     <div className="h-16 w-16 bg-gray-50 rounded-lg border border-gray-100 flex-shrink-0 flex items-center justify-center overflow-hidden p-1">
@@ -208,13 +199,13 @@ export default function UserOrderDetailsPage({
                         {item?.product?.name || "Product Item"}
                       </h4>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Price per unit: ₹{item?.price?.toLocaleString("en-IN") || 0}
+                        Price per unit: ₹{Number(item?.price || 0).toLocaleString("en-IN")}
                       </p>
                     </div>
                     
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-gray-900 text-sm">
-                        ₹{((item?.price || 0) * (item?.quantity || 1)).toLocaleString("en-IN")}
+                        ₹{(Number(item?.price || 0) * (item?.quantity || 1)).toLocaleString("en-IN")}
                       </p>
                       <p className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md inline-block mt-1">
                         Qty: {item?.quantity || 1}
@@ -240,21 +231,21 @@ export default function UserOrderDetailsPage({
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span className="font-medium text-gray-900">
-                  ₹{((order.totalAmount || 0) - (order.shippingCost || 0)).toLocaleString("en-IN")}
+                  ₹{subtotal.toLocaleString("en-IN")}
                 </span>
               </div>
               
               <div className="flex justify-between text-gray-600">
                 <span>Delivery Charges</span>
                 <span className="font-medium text-gray-900">
-                  {order.shippingCost ? `₹${order.shippingCost.toLocaleString("en-IN")}` : "Complimentary"}
+                  {shippingCost > 0 ? `₹${shippingCost.toLocaleString("en-IN")}` : "₹0 (Free)"}
                 </span>
               </div>
               
               <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
                 <span className="font-bold text-gray-900">Total Paid</span>
                 <span className="text-xl font-black text-blue-600">
-                  ₹{order.totalAmount?.toLocaleString("en-IN") || 0}
+                  ₹{totalAmount.toLocaleString("en-IN")}
                 </span>
               </div>
             </div>
